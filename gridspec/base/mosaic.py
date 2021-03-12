@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Tuple
 import os.path
+from pathlib import Path
 
+import numpy as np
 import xarray as xr
 
 from gridspec.base.utils import string_da, string_array_da, first_da_matching_standard_name
@@ -28,7 +30,12 @@ class MosaicFile:
         """
         return [os.path.join(self.tile_files_root, fname) for fname in self.tile_filenames]
 
-    def to_netcdf(self):
+    def to_netcdf(self, directory=None) -> str:
+        if directory is None:
+            directory = Path.cwd()
+        elif isinstance(directory, str):
+            directory = Path(directory)
+
         ds = xr.Dataset()
         ds['mosaic'] = string_da(
             self.name,
@@ -63,7 +70,9 @@ class MosaicFile:
             dim=self.name_ncontact_dim,
             standard_name="starting_ending_point_index_of_contact"
         )
-        ds.to_netcdf(f'{self.name}.nc')
+        opath = str(directory.joinpath(f'{self.name}.nc'))
+        ds.to_netcdf(opath)
+        return opath
 
     def load_netcdf(self, filepath):
         ds = xr.open_dataset(filepath)
@@ -76,6 +85,24 @@ class MosaicFile:
         self.contacts = [byte_arr.decode() for byte_arr in ds[self.name_contacts].values]
         self.name_contact_index = ds[self.name_contacts].attrs['contact_index']
         self.contact_indices = [byte_arr.decode() for byte_arr in ds[self.name_contact_index].values]
+
+    def __eq__(self, other):
+        names_are_equal = (
+            self.name == other.name and
+            self.name_children == other.name_children and
+            self.name_contacts == other.name_contacts and
+            self.name_contact_index == other.name_contact_index and
+            self.name_ntiles_dim == other.name_ntiles_dim and
+            self.name_ncontact_dim == other.name_ncontact_dim
+        )
+        values_are_equal = (
+            self.tile_files_root == other.tile_files_root and
+            self.tile_names == other.tile_names and
+            self.tile_filenames == other.tile_filenames and
+            self.contacts == other.contacts and
+            self.contact_indices == other.contact_indices
+        )
+        return names_are_equal and values_are_equal
 
 
 class TileFile:
@@ -113,9 +140,22 @@ class TileFile:
         return ds
 
     def from_ds(self, ds):
-        self.attrs = first_da_matching_standard_name(ds, "grid_tile_spec").attrs
+        self.attrs = list(ds.filter_by_attrs(standard_name="grid_tile_spec").variables.values())[0].attrs
         self.supergrid_lats = first_da_matching_standard_name(ds, "geographic_latitude")
         self.supergrid_lons = first_da_matching_standard_name(ds, "geographic_longitude")
+
+    def __eq__(self, other):
+        names_are_equal = (
+            self.name == other.name and
+            self.name_ydim == other.name_ydim and
+            self.name_xdim == other.name_xdim
+        )
+        attrs_are_equal = (self.attrs == other.attrs)
+        values_are_equal = (
+            np.allclose(self.supergrid_lats, other.supergrid_lats) and
+            np.allclose(self.supergrid_lons, other.supergrid_lons)
+        )
+        return names_are_equal and attrs_are_equal and values_are_equal
 
 
 class GridspecFactory(ABC):
@@ -123,16 +163,34 @@ class GridspecFactory(ABC):
     def tiles(self) -> List[TileFile]:
         pass
 
+    def tile_file_paths(self, mosaic_dir=None) -> List[str]:
+        if mosaic_dir is None:
+            mosaic_dir = Path.cwd()
+        elif isinstance(mosaic_dir, str):
+            mosaic_dir = Path(mosaic_dir)
+
+        paths = []
+        for tilepath_relto_mosaic in self.mosaic().tile_file_paths():
+            if not Path(tilepath_relto_mosaic).is_absolute():
+                paths.append(str(mosaic_dir.joinpath(tilepath_relto_mosaic)))
+            else:
+                paths.append(tilepath_relto_mosaic)
+        return paths
+
     @abstractmethod
     def mosaic(self) -> MosaicFile:
         pass
 
-    def save(self):
-        for tile, tile_filename in zip(self.tiles(), self.mosaic().tile_filenames):
+    def save(self, directory=None) -> str:
+        if directory is None:
+            directory = Path.cwd()
+        elif isinstance(directory, str):
+            directory = Path(directory)
+        for tile, tile_path in zip(self.tiles(), self.tile_file_paths(directory)):
             ds = tile.to_ds()
-            opath = os.path.join(self.mosaic().tile_files_root, tile_filename)
-            ds.to_netcdf(opath)
-        self.mosaic().to_netcdf()
+            ds.to_netcdf(tile_path)
+        mosaic_path = self.mosaic().to_netcdf(directory)
+        return mosaic_path
 
 
 class LoadGridspec(GridspecFactory):
@@ -140,9 +198,12 @@ class LoadGridspec(GridspecFactory):
         self._mosaic = MosaicFile()
         self._mosaic.load_netcdf(gridspec_path)
         self._tiles = [TileFile(name=name) for name in self.mosaic().tile_names]
-        tile_files_root = self.mosaic().tile_files_root
-        for i, filename in enumerate(self.mosaic().tile_filenames):
-            ds = xr.open_dataset(os.path.join(tile_files_root, filename))
+        for i, filepath in enumerate(self.mosaic().tile_file_paths()):
+            if not Path(filepath).is_absolute():
+                ipath = str(Path(gridspec_path).parent.joinpath(filepath))
+            else:
+                ipath = filepath
+            ds = xr.open_dataset(ipath)
             self._tiles[i].from_ds(ds)
 
     def mosaic(self) -> MosaicFile:
