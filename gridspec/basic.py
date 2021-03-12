@@ -58,3 +58,26 @@ def create_mosaic_ds(name, tilenames, gridfiles,
         standard_name="starting_ending_point_index_of_contact"
     )
     return ds
+
+
+def create_tile_simple_noncompliant(tilename, x, y, ydim_name='YCdim', xdim_name='XCdim'):
+    ds = xr.Dataset()
+    ds['tile'] = string_da(
+        tilename,
+        standard_name="grid_tile_spec",
+        geometry="spherical",
+        north_pole="0.0 90.0",
+        projection="cube_gnomonic",
+        discretization="logically_rectangular",
+        conformal="FALSE"
+    )
+    ds['x'] = xr.DataArray(
+        x, dims=[ydim_name, xdim_name],
+        attrs=dict(standard_name="geographic_longitude", units="degree_east")
+    )
+    ds['y'] = xr.DataArray(
+        y, dims=[ydim_name, xdim_name],
+        attrs=dict(standard_name="geographic_latitude", units="degree_north")
+    )
+    return ds
+

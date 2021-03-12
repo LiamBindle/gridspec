@@ -49,19 +49,32 @@ def spherical_excess_area(radius,
     area = (a1 + a2 + a3 + a4 - 2.*np.pi) * radius * radius
     return area
 
+
 if __name__ == '__main__':
+    from gridspec.constants import RADIUS_EARTH
     pt1 = (32.1, 43.2)
     pt2 = (38.1, 42.1)
     pt3 = (41.1, 52.1)
     pt4 = (35.1, 49.9)
     correct_area_m2 = 481632579328
 
-    R_EARTH=6378137.0
-    my_area = spherical_excess_area(R_EARTH,
+    my_area = spherical_excess_area(RADIUS_EARTH,
                                     *np.deg2rad(pt1),
                                     *np.deg2rad(pt2),
                                     *np.deg2rad(pt3),
                                     *np.deg2rad(pt4))
+    my_area2 = spherical_excess_area(RADIUS_EARTH,
+                                    *np.deg2rad(pt2),
+                                    *np.deg2rad(pt3),
+                                    *np.deg2rad(pt4),
+                                    *np.deg2rad(pt1))
+    my_area3 = spherical_excess_area(RADIUS_EARTH,
+                                     *np.deg2rad(pt3),
+                                     *np.deg2rad(pt2),
+                                     *np.deg2rad(pt1),
+                                     *np.deg2rad(pt4))
 
     print(f"Correct value : {correct_area_m2:e} (m+2)")
     print(f"Calculated value: {my_area:e} (m+2)")
+    print(f"Calculated value: {my_area2:e} (m+2)")
+    print(f"Calculated value: {my_area3:e} (m+2)")

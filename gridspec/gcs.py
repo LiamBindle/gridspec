@@ -1,4 +1,6 @@
-from gridspec.basic import create_mosaic_ds
+from gridspec.basic import create_mosaic_ds, create_tile_simple_noncompliant
+
+from gridspec.grids.gnomonic_cube_sphere import make_grid_CS
 
 
 def create_gcs_mosaic(cs_size,
@@ -41,4 +43,30 @@ def create_gcs_mosaic(cs_size,
         f"{cs_size*2}:{cs_size*2},1:{cs_size*2}::{cs_size*2}:1,1:1",
         f"{cs_size*2}:{cs_size*2},1:{cs_size*2}::1:1,1:{cs_size*2}"
     ]
-    return create_mosaic_ds(name, tiles, gridfiles, contacts, contact_indices)
+    ds = create_mosaic_ds(name, tiles, gridfiles, contacts, contact_indices)
+    ds.to_netcdf(f'{name}.nc')
+    return ds
+
+
+def create_gcs_tiles(cs_size, tilenames='tile{tile_number}', gridfiles='c{cs_size}.{tile_name}.nc'):
+    grid, _ = make_grid_CS(cs_size)
+    x = grid['lon_b']
+    y = grid['lat_b']
+    tiles = []
+    for face in range(6):
+        template_dict = dict(tile_number=face+1, cs_size=cs_size)
+        tilename = tilenames.format(**template_dict)
+        template_dict['tile_name'] = tilename
+        ds = create_tile_simple_noncompliant(
+            tilename,
+            x[face], y[face]
+        )
+        gridfile_name = gridfiles.format(**template_dict)
+        ds.to_netcdf(gridfile_name)
+        tiles.append(ds)
+    return tiles
+
+if __name__ == '__main__':
+    cs_size = 24
+    create_gcs_tiles(cs_size)
+    create_gcs_mosaic(cs_size)
