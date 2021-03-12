@@ -25,7 +25,7 @@ class GnomonicCubedSphereGridspec(GridspecFactory):
 
         filler_dict = dict(
             cs_size=cs_size,
-            stretch_factor=f"4.2f".replace(".", "d"),
+            stretch_factor=f"{stretch_factor:.2f}".replace(".", "d"),
             target_geohash=pgh.encode(target_lat, target_lon),
         )
         name = name.format(**filler_dict)

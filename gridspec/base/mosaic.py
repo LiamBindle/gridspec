@@ -71,10 +71,11 @@ class MosaicFile:
         self.name_children = ds['mosaic'].attrs['children']
         self.name_contacts = ds['mosaic'].attrs['contact_regions']
         self.tile_files_root = ds['gridlocation'].item().decode()
-        self.tile_names = [byte_arr.decode() for byte_arr in ds[self.name_children]]
-        self.contacts = [byte_arr.decode() for byte_arr in ds[self.name_contacts]]
+        self.tile_names = [byte_arr.decode() for byte_arr in ds[self.name_children].values]
+        self.tile_filenames = [byte_arr.decode() for byte_arr in ds["gridfiles"].values]
+        self.contacts = [byte_arr.decode() for byte_arr in ds[self.name_contacts].values]
         self.name_contact_index = ds[self.name_contacts].attrs['contact_index']
-        self.contact_indices = [byte_arr.decode() for byte_arr in ds[self.name_contact_index]]
+        self.contact_indices = [byte_arr.decode() for byte_arr in ds[self.name_contact_index].values]
 
 
 class TileFile:
