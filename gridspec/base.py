@@ -6,8 +6,20 @@ from pathlib import Path
 import numpy as np
 import xarray as xr
 
-from gridspec.base.utils import string_da, string_array_da, first_da_matching_standard_name
+def string_da(value, **attrs):
+    da = xr.DataArray(data=value).astype('S255')
+    da.attrs.update(attrs)
+    return da
 
+
+def string_array_da(values, dim, **attrs):
+    da = xr.DataArray(data=[*values], dims=dim).astype('S255')
+    da.attrs.update(attrs)
+    return da
+
+
+def first_da_matching_standard_name(ds, standard_name):
+    return ds.filter_by_attrs(standard_name=standard_name).to_array()[0]
 
 class MosaicFile:
     name_children = "gridtiles"

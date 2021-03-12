@@ -2,7 +2,7 @@ from pathlib import Path
 
 import xarray as xr
 
-from gridspec.base.mosaic import LoadGridspec
+from gridspec.base import LoadGridspec
 
 
 def split_datafile(datafile, tile_dim, gridspec_file, directory=None):

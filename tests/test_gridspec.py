@@ -1,7 +1,7 @@
 import pytest
 
 from gridspec.gnom_cube_sphere.gcs_gridspec import GnomonicCubedSphereGridspec
-from gridspec.base.mosaic import LoadGridspec, MosaicFile
+from gridspec.base import LoadGridspec
 
 
 def test_gridspec_save_and_load(tmp_path):

@@ -4,7 +4,7 @@ import pygeohash as pgh
 
 from gridspec.gnom_cube_sphere.cubesphere import csgrid_GMAO
 from gridspec.gnom_cube_sphere.schmidt import scs_transform
-from gridspec.base.mosaic import GridspecFactory, TileFile, MosaicFile
+from gridspec.base import GridspecFactory, TileFile, MosaicFile
 
 
 class GnomonicCubedSphereGridspec(GridspecFactory):
