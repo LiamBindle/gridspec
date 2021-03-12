@@ -49,7 +49,7 @@ def create_gcs_mosaic(cs_size,
 
 
 def create_gcs_tiles(cs_size, tilenames='tile{tile_number}', gridfiles='c{cs_size}.{tile_name}.nc'):
-    grid, _ = make_grid_CS(cs_size)
+    grid, _ = make_grid_CS(cs_size*2)
     x = grid['lon_b']
     y = grid['lat_b']
     tiles = []
@@ -67,6 +67,6 @@ def create_gcs_tiles(cs_size, tilenames='tile{tile_number}', gridfiles='c{cs_siz
     return tiles
 
 if __name__ == '__main__':
-    cs_size = 24
+    cs_size = 12
     create_gcs_tiles(cs_size)
     create_gcs_mosaic(cs_size)
