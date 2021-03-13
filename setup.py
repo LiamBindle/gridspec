@@ -13,6 +13,7 @@ setup(
     py_modules=['gridspec'],
     install_requires=[
         'pygeohash',
+        'netcdf4',
         'xarray',
         'numpy',
         'click',

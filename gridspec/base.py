@@ -9,20 +9,28 @@ import xarray as xr
 
 from gridspec.misc.geometry import spherical_excess_area
 
+
 def string_da(value, **attrs):
+    """ Returns a xr.DataArray for a character array """
     da = xr.DataArray(data=value).astype('S255')
     da.attrs.update(attrs)
     return da
 
 
 def string_array_da(values, dim, **attrs):
+    """ Returns a xr.DataArray for an array of character arrays """
     da = xr.DataArray(data=[*values], dims=dim).astype('S255')
     da.attrs.update(attrs)
     return da
 
 
-def first_da_matching_standard_name(ds, standard_name):
-    return ds.filter_by_attrs(standard_name=standard_name).to_array()[0]
+def first_da_matching_standard_name(ds, standard_name, only_one=True):
+    """ Returns the xr.DataArray with a standard name """
+    v = list(ds.filter_by_attrs(standard_name=standard_name).variables.values())
+    if not only_one:
+        return v
+    else:
+        return v[0]
 
 
 class MosaicFile:
@@ -42,9 +50,6 @@ class MosaicFile:
         self.this_files_path=None
 
     def tile_file_paths(self):
-        """
-        Returns a list of the paths to the tile files.
-        """
         return [os.path.join(self.tile_files_root, fname) for fname in self.tile_filenames]
 
     def to_netcdf(self, directory=None) -> str:
@@ -125,12 +130,12 @@ class MosaicFile:
         return names_are_equal and values_are_equal
 
     def __str__(self):
-        msg = f"gridspec mosaic  ({self.name}, {len(self.tile_filenames)} tiles, {len(self.contacts)} contacts)"
-        msg2 =f"tile files:      "
-        msg2 += ", ".join([f'"{filepath}"' for filepath in self.tile_file_paths()])
-        msg2 = "\n...              ".join(textwrap.wrap(msg2, 80))
-        msg += "\n" + msg2
-        return msg
+        header = f"Gridspec mosaic  ({self.name}, {len(self.tile_filenames)} tiles, {len(self.contacts)} contacts)"
+        tile_desc = f"Tile files:      "
+        tile_desc += ", ".join([f'"{filepath}"' for filepath in self.tile_file_paths()])
+        tile_desc = "\n...              ".join(textwrap.wrap(tile_desc, 80))
+        text = header + "\n" + tile_desc
+        return text
 
 
 class TileFile:
@@ -165,8 +170,8 @@ class TileFile:
     def from_ds(self, ds):
         if len(ds.filter_by_attrs(standard_name="grid_tile_spec")) != 1:
             raise ValueError("Dataset is not a gridspec tile")
-        self.name = list(ds.filter_by_attrs(standard_name="grid_tile_spec").variables.values())[0].item().decode()
-        self.attrs = list(ds.filter_by_attrs(standard_name="grid_tile_spec").variables.values())[0].attrs
+        self.name = first_da_matching_standard_name(ds, standard_name="grid_tile_spec").item().decode()
+        self.attrs = first_da_matching_standard_name(ds, standard_name="grid_tile_spec").attrs
         self.supergrid_lats = first_da_matching_standard_name(ds, "geographic_latitude").values
         self.supergrid_lons = first_da_matching_standard_name(ds, "geographic_longitude").values
 
@@ -201,7 +206,15 @@ class TileFile:
             np.deg2rad(self.supergrid_lats[pt3[0], pt3[1]]), np.deg2rad(self.supergrid_lons[pt3[0], pt3[1]]),
             np.deg2rad(self.supergrid_lats[pt4[0], pt4[1]]), np.deg2rad(self.supergrid_lons[pt4[0], pt4[1]]),
         ) / 1e6
-        return f"  {self.name:10s}  ({self.supergrid_lats.shape[0]}x{self.supergrid_lats.shape[1]})      logical center {center:20s}  approx area: {area:.1e} km+2"
+        text = "  {name:10s}  ({shape0}x{shape1})      logical center {center:20s}  approx area: {area:.1e} km+2"
+        text = text.format(
+            name=self.name,
+            shape0=self.supergrid_lats.shape[0],
+            shape1=self.supergrid_lats.shape[1],
+            center=center,
+            area=area
+        )
+        return text
 
 
 class GridspecFactory(ABC):
@@ -242,13 +255,10 @@ class GridspecFactory(ABC):
 
     def __str__(self):
         msg = str(self.mosaic())
-        msg += f"\n\ngridspec tiles:"
+        msg += f"\n\nGridspec tiles:"
         for tile in self.tiles():
             msg += f"\n{str(tile)}"
         return msg
-
-    def __repr__(self):
-        return f"<gridspec.Gridspec>\n" + str(self)
 
 
 class LoadGridspec(GridspecFactory):

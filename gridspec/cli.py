@@ -1,18 +1,59 @@
 import click
 
+
+output_dir_option_posargs=('-o', '--output-dir')
+output_dir_option_kwargs=dict(
+    type=click.Path(exists=True, file_okay=False, dir_okay=True, writable=True),
+    default="./",
+    help="The directory that output files are written to."
+)
+
+cs_size_posargs = ('N',)
+cs_size_kwargs = dict(
+    type=click.IntRange(min=2)
+)
+
+stretch_factor_posargs = ('-s', '--stretch-factor',)
+stretch_factor_kwargs = dict(
+    type=click.FloatRange(min=1.0),
+    required=True,
+    metavar="S",
+    help="The stretch factor"
+)
+
+target_point_posargs = ('-t', '--target-point')
+target_point_kwargs = dict(
+    type=click.FLOAT,
+    nargs=2,
+    metavar="LAT LON",
+    required=True,
+    help="The target latitude and longitude"
+)
+
+mosaic_file_posargs = ('-m', '--mosaic',)
+mosaic_file_kwargs = dict(
+    type=click.Path(exists=True, file_okay=True, dir_okay=False, writable=False, readable=True),
+    required=True,
+    help="Mosaic file"
+)
+
+tile_dim_posargs = ('-d', '--dim')
+tile_dim_kwargs = dict(
+    type=click.STRING, metavar="NAME", required=True,
+    help="Name of the tile dimension in the data files"
+)
+
+
 @click.group()
 def create():
     """ Create a gridspec file
     """
     pass
 
+
 @create.command()
-@click.argument('N',
-                type=click.IntRange(min=2))
-@click.option('--output-dir',
-              type=click.Path(exists=True, file_okay=False, dir_okay=True, writable=True),
-              default="./",
-              help="The directory that the mosaic file is saved to")
+@click.argument(*cs_size_posargs, **cs_size_kwargs)
+@click.option(*output_dir_option_posargs, **output_dir_option_kwargs)
 def gcs(n, output_dir):
     """Create a Gnomonic Cubed-Sphere (GCS) grid.
 
@@ -31,24 +72,10 @@ def gcs(n, output_dir):
 
 
 @create.command()
-@click.argument('N',
-                type=click.IntRange(min=2))
-@click.option('-s', '--stretch-factor',
-              type=click.FloatRange(min=1.0),
-              required=True,
-              metavar="S",
-              help="The stretch factor")
-@click.option('-t', '--target-point',
-              type=click.FLOAT,
-              nargs=2,
-              metavar="LAT LON",
-              required=True,
-              help="The target latitude and longitude")
-@click.option('--output-dir',
-              type=click.Path(exists=True, file_okay=False, dir_okay=True, writable=True),
-              metavar="PATH",
-              default="./",
-              help="The directory that the mosaic file is saved to")
+@click.argument(*cs_size_posargs, **cs_size_kwargs)
+@click.option(*stretch_factor_posargs, **stretch_factor_kwargs)
+@click.option(*target_point_posargs, **target_point_kwargs)
+@click.option(*output_dir_option_posargs, **output_dir_option_kwargs)
 def sgcs(n, stretch_factor, target_point, output_dir):
     """Create a Stretched Gnomonic Cubed Sphere (SGCS) grid.
 
@@ -112,18 +139,9 @@ def show(filepath):
 @click.argument('datafile',
                 nargs=-1, required=True,
                 type=click.Path(exists=True, file_okay=True, dir_okay=False, writable=False, readable=True))
-@click.option('-m', '--mosaic',
-              type=click.Path(exists=True, file_okay=True, dir_okay=False, writable=False, readable=True),
-              required=True,
-              help="Path to gridspec mosaic")
-@click.option('-d', '--dim',
-              type=click.STRING, metavar="NAME", required=True,
-              help="The name of tile dimension in the data files")
-@click.option("-o", '--output-dir',
-              type=click.Path(exists=True, file_okay=False, dir_okay=True, writable=True),
-              metavar="PATH",
-              default="./",
-              help="The directory that the mosaic file is saved to")
+@click.option(*mosaic_file_posargs, **mosaic_file_kwargs)
+@click.option(*tile_dim_posargs, **tile_dim_kwargs)
+@click.option(*output_dir_option_posargs, **output_dir_option_kwargs)
 def split_datafile(datafile, mosaic, dim, output_dir):
     """
     Split a (stacked) data file into separate data files for each tile.
@@ -147,11 +165,7 @@ def split_datafile(datafile, mosaic, dim, output_dir):
               type=click.Path(exists=True, file_okay=True, dir_okay=False, writable=False, readable=True),
               required=True,
               help="Path to gridspec mosaic")
-@click.option("-o", '--output-dir',
-              type=click.Path(exists=True, file_okay=False, dir_okay=True, writable=True),
-              metavar="PATH",
-              default="./",
-              help="The directory that the mosaic file is saved to")
+@click.option(*output_dir_option_posargs, **output_dir_option_kwargs)
 def new_datafiles(file_prefix, mosaic, output_dir):
     """
     Create new empty data files. This is useful for the --dstdatafile argument in ESMF_Regrid.
@@ -172,21 +186,12 @@ def new_datafiles(file_prefix, mosaic, output_dir):
 
 @utils.command()
 @click.argument('file_prefix', nargs=-1, required=True, type=click.STRING)
-@click.option('-m', '--mosaic',
-              type=click.Path(exists=True, file_okay=True, dir_okay=False, writable=False, readable=True),
-              required=True,
-              help="Path to gridspec mosaic")
-@click.option('-d', '--dim',
-              type=click.STRING, metavar="NAME", required=True,
-              help="The name of tile dimension in the data files")
+@click.option(*mosaic_file_posargs, **mosaic_file_kwargs)
+@click.option(*tile_dim_posargs, **tile_dim_kwargs)
 @click.option('-s', '--spec',
               type=click.File(), metavar="JSONSPEC", required=True,
               help="The joining spec (JSON) file path")
-@click.option("-o", '--output-dir',
-              type=click.Path(exists=True, file_okay=False, dir_okay=True, writable=True),
-              metavar="PATH",
-              default="./",
-              help="The directory that the mosaic file is saved to")
+@click.option(*output_dir_option_posargs, **output_dir_option_kwargs)
 def join_datafiles(file_prefix, mosaic, dim, spec, output_dir):
     """
     Create new empty data files. This is useful for the --dstdatafile argument in ESMF_Regrid.
