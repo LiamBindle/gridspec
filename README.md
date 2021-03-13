@@ -1,4 +1,6 @@
-## gridspec ![gridspec badge](https://github.com/LiamBindle/gridspec/actions/workflows/continuous-integration.yml/badge.svg)
+## gridspec
+![CI badge](https://github.com/LiamBindle/gridspec/actions/workflows/continuous-integration.yml/badge.svg)
+
 Gridspec is a proposed standard for representing Earth system model grids. The standard was originally proposed by
 V. Balaji and Z. Liang (2007; [reference](https://extranet.gfdl.noaa.gov/~vb/gridstd/gridstd.html)). 
 
