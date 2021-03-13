@@ -42,7 +42,7 @@ This installs:
 
 Creating a cubed-sphere grid:
 ```console
-$ gridspec-create gcs 24                                                                                                                                                                                                                   🐍 sphinx
+$ gridspec-create gcs 24
 Creating gnomonic cubed-sphere grid.
   Cubed-sphere size: C24
 
@@ -61,7 +61,7 @@ $
 
 Creating a stretched cubed-sphere grid:
 ```console
-$ gridspec-create gcs 24 -s 2 -t 40 -100                                                                                                                                                                                                   🐍 sphinx
+$ gridspec-create gcs 24 -s 2 -t 40 -100
 Creating stretched gnomonic cubed-sphere grid.
   Cubed-sphere size: C12
   Stretch factor:    2.0
@@ -82,7 +82,7 @@ $
 
 View the contents of a mosaic or tile file:
 ```console
-$ gridspec-dump c24_gridspec.nc                                                                                                                                                                                                            🐍 sphinx
+$ gridspec-dump c24_gridspec.nc                  
 Gridspec mosaic  (c24_gridspec, 6 tiles, 12 contacts)
 Tile files:      "c24.tile1.nc", "c24.tile2.nc", "c24.tile3.nc", "c24.tile4.nc",
 ...              "c24.tile5.nc", "c24.tile6.nc"
