@@ -10,20 +10,16 @@ files and data. This project aims to develop common tools for working with grids
 
 The grids that are currently implemented are:
 
-- gnomonic cubed-sphere (`gcs`)
-- stretched gnomonic cubed-sphere (`sgcs`)
+- [X] gnomonic cubed-sphere (see: `gridspec-create gcs --help`)
+- [X] stretched gnomonic cubed-sphere (see: `gridspec-create sgcs --help`)
+- [ ] regular lat-lon grid
+
+See "Contributing" for information on submitting pull-requests and setting up a development copy. 
 
 ## Compliance
 
-
-
 - [X] ESMF GRIDSPEC (subset of the standard)
 - [ ] Full gridspec standard
-
-## Supported grids
-
-- gnomonic cubed-sphere
-- stretched gnomonic cubed-sphere
 
 ## Installation
 
@@ -32,7 +28,7 @@ You can install `gridspec` like so:
 $ pip install git+https://github.com/LiamBindle/gridspec.git 
 ```
 
-This installs:
+This installs (see `--help` for subcommands and their usage):
 
 - `gridspec-create`: create a gridspec file for one of the supported grids (mosaic or tile)
 - `gridspec-dump`: displays useful information about a gridspec file
@@ -116,5 +112,6 @@ Tests are implemented in `tests.py`. To run the tests, you need to install
 [pytest](https://docs.pytest.org/en/stable/getting-started.html). Once pytest is installed, you can run the tests like
 so:
 ```console
-$ pytest 
+$ cd gridspec/gridspec/
+$ pytest tests.py
 ```
