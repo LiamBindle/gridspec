@@ -1,5 +1,7 @@
 import click
-
+from gridspec import GridspecGnomonicCubedSphere, load_mosaic
+from gridspec.base import GridspecMosaic, GridspecTile
+from gridspec.misc.datafile_ops import join_datafiles, split_datafile, touch_datafiles
 
 output_dir_option_posargs=('-o', '--output-dir')
 output_dir_option_kwargs=dict(
@@ -59,12 +61,11 @@ def gcs(n, output_dir):
 
     N is the cubed-sphere size (resolution). For example, N=180 for a C180 grid.
     """
-    from gridspec.gnom_cube_sphere.gcs_gridspec import GnomonicCubedSphereGridspec
     click.echo(f'Creating gnomonic cubed-sphere grid.')
     click.echo(f'  Cubed-sphere size: C{n}\n')
-    gs = GnomonicCubedSphereGridspec(n)
+    gs = GridspecGnomonicCubedSphere(n)
     click.echo('Writing mosaic and tile files')
-    mosaic_file, tile_files = gs.save(directory=output_dir)
+    mosaic_file, tile_files = gs.to_netcdf(directory=output_dir)
     click.echo(f'  + {mosaic_file}')
     for tile_file in tile_files:
         click.echo(f'  + {tile_file}')
@@ -81,8 +82,6 @@ def sgcs(n, stretch_factor, target_point, output_dir):
 
     N is the cubed-sphere size (resolution). For example, N=180 for a C180 grid.
     """
-    from gridspec.gnom_cube_sphere.gcs_gridspec import GnomonicCubedSphereGridspec
-
     target_lat = target_point[0]
     target_lon = target_point[1]
     if target_lat < -90.0 or target_lat > 90.0:
@@ -94,9 +93,9 @@ def sgcs(n, stretch_factor, target_point, output_dir):
     click.echo(f'  Cubed-sphere size: C{n}')
     click.echo(f'  Stretch factor:    {round(stretch_factor, 2)}')
     click.echo(f'  Target point:      {round(target_lat, 2)}°N, {round(target_lon, 2)}°E\n')
-    gs = GnomonicCubedSphereGridspec(n, stretch_factor=stretch_factor, target_lat=target_lat, target_lon=target_lon)
+    gs = GridspecGnomonicCubedSphere(n, stretch_factor=stretch_factor, target_lat=target_lat, target_lon=target_lon)
     click.echo('Writing mosaic and tile files.')
-    mosaic_file, tile_files = gs.save(directory=output_dir)
+    mosaic_file, tile_files = gs.to_netcdf(directory=output_dir)
     click.echo(f'  + {mosaic_file}')
     for tile_file in tile_files:
         click.echo(f'  + {tile_file}')
@@ -115,25 +114,20 @@ def show(filepath):
     """
     import xarray as xr
     ds = xr.open_dataset(filepath)
-    from gridspec.base import TileFile, LoadGridspec
-    is_mosaic = True
-    try:
-        mosaic = LoadGridspec(filepath)
+
+    mosaic = GridspecMosaic()
+    is_mosaic = mosaic.load(ds)
+    if is_mosaic:
+        mosaic = load_mosaic(filepath)  # load_mosaic also loads all the tiles
         print(mosaic)
-    except ValueError:
-        is_mosaic = False
-
-    is_tile = True
-    if not is_mosaic:
-        try:
-            tile = TileFile()
-            tile.from_ds(ds)
+    else:
+        tile = GridspecTile()
+        is_tile = tile.load(ds)
+        if is_tile:
             print(tile)
-        except ValueError:
-            is_tile = False
+        else:
+            raise click.BadParameter(f"{filepath} is not a gridspec tile or mosaic")
 
-    if not is_mosaic and not is_tile:
-        raise click.BadParameter(f"{filepath} is not a gridspec file")
 
 @utils.command()
 @click.argument('datafile',
@@ -148,8 +142,6 @@ def split_datafile(datafile, mosaic, dim, output_dir):
 
     DATAFILE... are the data files that are split.
     """
-    from gridspec.misc.datafile_ops import split_datafile
-
     click.echo(f'Splitting {len(datafile)} datafiles along dimension "{dim}"')
     new_files = []
     for f in datafile:
@@ -172,8 +164,6 @@ def new_datafiles(file_prefix, mosaic, output_dir):
 
     FILE_PREFIX... are the name prefixes for the empty data files that are created.
     """
-    from gridspec.misc.datafile_ops import touch_datafiles
-
     click.echo(f'Creating empty data files.')
     new_files = []
     for fprefix in file_prefix:
@@ -199,7 +189,6 @@ def join_datafiles(file_prefix, mosaic, dim, spec, output_dir):
     FILE_PREFIX... are the name prefixes for the empty data files that are created.
     """
     import json
-    from gridspec.misc.datafile_ops import join_datafiles
     from pathlib import Path
     click.echo('Loading join specification')
     join_spec = json.loads(spec.read())

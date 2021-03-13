@@ -3,14 +3,14 @@ from typing import List
 
 import xarray as xr
 
-from gridspec.base import LoadGridspec
+from gridspec.base import load_mosaic
 
 
 def split_datafile(datafile, tile_dim, gridspec_file, directory=None) -> List[str]:
-    gridspec = LoadGridspec(gridspec_file)
+    mosaic = load_mosaic(gridspec_file)
     ds = xr.open_dataset(datafile)
 
-    assert ds.dims[tile_dim] == len(gridspec.tiles())
+    assert ds.dims[tile_dim] == len(mosaic.tiles)
 
     # Determine the output directory for the split files
     datafile_path = Path(datafile)
@@ -21,7 +21,7 @@ def split_datafile(datafile, tile_dim, gridspec_file, directory=None) -> List[st
 
     # Split the files
     split_file_paths=[]
-    for i, tile_name in enumerate(gridspec.mosaic().tile_names):
+    for i, tile_name in enumerate(mosaic.tile_names):
         tile_ds = ds.isel(**{tile_dim: i})
         filename = f"{datafile_path.stem}.{tile_name}.nc"
         opath = str(directory.joinpath(filename))
@@ -31,20 +31,20 @@ def split_datafile(datafile, tile_dim, gridspec_file, directory=None) -> List[st
 
 
 def touch_datafiles(gridspec_file, datafile_prefix, datafile_suffix='.nc', directory="./",
-                    name_dim0='Ydim', name_dim1='Xdim',
+                    name_dim1='Ydim', name_dim2='Xdim',
                     name_lat_coord='lats', name_lon_coord='lons') -> List[str]:
-    gridspec = LoadGridspec(gridspec_file)
+    mosaic = load_mosaic(gridspec_file)
     directory = Path(directory)
 
     new_files=[]
-    for tile in gridspec.tiles():
+    for tile in mosaic.tiles:
         lons = tile.supergrid_lons[1::2, 1::2]
         lats = tile.supergrid_lats[1::2, 1::2]
 
         ds = xr.Dataset()
         ds.coords[name_lon_coord] = xr.DataArray(
             lons,
-            dims=(name_dim0, name_dim1),
+            dims=(name_dim1, name_dim2),
             attrs=dict(
                 standard_name="geographic_longitude",
                 units="degree_east"
@@ -52,7 +52,7 @@ def touch_datafiles(gridspec_file, datafile_prefix, datafile_suffix='.nc', direc
         )
         ds.coords[name_lat_coord] = xr.DataArray(
             lats,
-            dims=(name_dim0, name_dim1),
+            dims=(name_dim1, name_dim2),
             attrs=dict(
                 standard_name="geographic_latitude",
                 units="degree_north"
@@ -70,7 +70,7 @@ def touch_datafiles(gridspec_file, datafile_prefix, datafile_suffix='.nc', direc
 def join_datafiles(datafile_prefix, gridspec_file, tile_dim,
                    datafile_suffix='.nc', directory="./",
                    rename_dict=None, coord_attrs_dict=None, transpose=None) -> str:
-    gridspec = LoadGridspec(gridspec_file)
+    mosaic = load_mosaic(gridspec_file, load_tiles=False)
     directory = Path(directory)
 
     if rename_dict is None:
@@ -79,8 +79,8 @@ def join_datafiles(datafile_prefix, gridspec_file, tile_dim,
         coord_attrs_dict = {}
 
     datasets = []
-    for tile in gridspec.tiles():
-        filename = f"{datafile_prefix}.{tile.name}{datafile_suffix}"
+    for tile_name in mosaic.tile_names:
+        filename = f"{datafile_prefix}.{tile_name}{datafile_suffix}"
         filepath = directory.joinpath(filename)
         datasets.append(xr.open_dataset(filepath))
 

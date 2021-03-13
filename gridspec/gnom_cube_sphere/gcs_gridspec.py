@@ -4,10 +4,10 @@ import pygeohash as pgh
 
 from gridspec.gnom_cube_sphere.cubesphere import csgrid_GMAO
 from gridspec.gnom_cube_sphere.schmidt import scs_transform
-from gridspec.base import GridspecFactory, TileFile, MosaicFile
+from gridspec.base import GridspecMosaic, GridspecTile
 
 
-class GnomonicCubedSphereGridspec(GridspecFactory):
+class GridspecGnomonicCubedSphere(GridspecMosaic):
     def __init__(self, cs_size, name=None, tile_names=None, tile_filenames=None, stretch_factor=1, target_lat=-90, target_lon=170):
         do_schmidt = stretch_factor != 1 or target_lat != -90 or target_lon != 170
         if name is None:
@@ -38,7 +38,6 @@ class GnomonicCubedSphereGridspec(GridspecFactory):
             filenames.append(tile_filenames.format(**filler_dict))
 
         supergrid_lat, supergrid_lon = self.calc_supergrid_latlon(cs_size, stretch_factor, target_lat, target_lon)
-
         tile_attrs = dict(
             geometry="spherical",
             north_pole="0.0 90.0",
@@ -46,20 +45,19 @@ class GnomonicCubedSphereGridspec(GridspecFactory):
             discretization="logically_rectangular",
             conformal="FALSE"
         )
+        super(GridspecGnomonicCubedSphere, self).__init__(
+            name=name,
+            tile_filenames=filenames,
+            contacts=self.get_contacts(name, tnames),
+            contact_indices=self.get_contact_indices(cs_size),
+            tiles=[GridspecTile(
+                name=tnames[i],
+                supergrid_lats=supergrid_lat[i, ...],
+                supergrid_lons=supergrid_lon[i, ...],
+                attrs=tile_attrs
 
-        self._tiles = []
-        for i in range(6):
-            self._tiles.append(TileFile(tnames[i], supergrid_lat[i, ...], supergrid_lon[i, ...], tile_attrs))
-
-        contacts = self.get_contacts(name, tnames)
-        contact_indices = self.get_contact_indices(cs_size)
-        self._mosaic = MosaicFile(name, tnames, filenames, contacts, contact_indices)
-
-    def mosaic(self) -> MosaicFile:
-        return self._mosaic
-
-    def tiles(self) -> List[TileFile]:
-        return self._tiles
+            ) for i in range(len(tnames))]
+        )
 
     @staticmethod
     def calc_supergrid_latlon(cs_size, stretch_factor=1, target_lat=-90, target_lon=170):
