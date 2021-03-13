@@ -1,39 +1,120 @@
 ## gridspec
 Gridspec is a proposed standard for representing Earth system model grids. The standard was originally proposed by
-V. Balaji and Z. Liang (2007; [reference](https://extranet.gfdl.noaa.gov/~vb/gridstd/gridstd.html)).
+V. Balaji and Z. Liang (2007; [reference](https://extranet.gfdl.noaa.gov/~vb/gridstd/gridstd.html)). 
 
-## Motivation
-Gridspec is particularly useful for regridding cubed-sphere data offline with tools like `ESMF_Regrid` and 
-`ESMF_RegridWeightGen`. Two barriers to effective use of gridspec files for offline regridding are: 
-to using gridspec effectively are:
-- No generalized frameworks or tools exist for creating gridspec files. Creating gridspec mosaic and tile files is 
-  time-consuming and error-prone.
-- No generalized utilities for converting CF compliant datafiles to/from gridspec compliant datafiles exist. 
-  Implementing custom utilities for stacking/unstacking tiled datafiles is tedious.
-  
-This project aims to develop and support common tools for working with gridspec files. 
+Gridspec files are useful for offline regridding with the Earth System Modeling Framework 
+([ESMF](https://earthsystemmodeling.org/)), but there are no generalized frameworks or utilities for creating gridspec
+files and data. This project aims to develop common tools for working with gridspec files and data.
 
-## Implementation compliance
+## Supported grids
 
-- [X] ESMF_GRIDSPEC
-- [ ] full gridspec standard
+The grids that are currently implemented are:
+
+- gnomonic cubed-sphere (`gcs`)
+- stretched gnomonic cubed-sphere (`sgcs`)
+
+## Compliance
+
+
+
+- [X] ESMF GRIDSPEC (subset of the standard)
+- [ ] Full gridspec standard
 
 ## Supported grids
 
 - gnomonic cubed-sphere
 - stretched gnomonic cubed-sphere
 
-## Examples
-todo
-
 ## Installation
-todo
+
+You can install `gridspec` like so:
+```console
+$ pip install git+https://github.com/LiamBindle/gridspec.git 
+```
+
+This installs:
+
+- `gridspec-create`: create a gridspec file for one of the supported grids (mosaic or tile)
+- `gridspec-dump`: displays useful information about a gridspec file
+- `gridspec-utils`: utilities for working with gridspec data (splitting stacked data files, joining tiled data files, etc.) 
+
+## Examples
+
+Creating a cubed-sphere grid:
+```console
+$ gridspec-create gcs 24                                                                                                                                                                                                                   🐍 sphinx
+Creating gnomonic cubed-sphere grid.
+  Cubed-sphere size: C24
+
+Writing mosaic and tile files
+  + c24_gridspec.nc
+  + c24.tile1.nc
+  + c24.tile2.nc
+  + c24.tile3.nc
+  + c24.tile4.nc
+  + c24.tile5.nc
+  + c24.tile6.nc
+
+Created 7 files.
+$ 
+```
+
+Creating a stretched cubed-sphere grid:
+```console
+$ gridspec-create gcs 24 -s 2 -t 40 -100                                                                                                                                                                                                   🐍 sphinx
+Creating stretched gnomonic cubed-sphere grid.
+  Cubed-sphere size: C12
+  Stretch factor:    2.0
+  Target point:      40.0°N, -100.0°E
+
+Writing mosaic and tile files.
+  + c12_s2d00_t9z0gs3y0zh7w_gridspec.nc
+  + c12_s2d00_t9z0gs3y0zh7w.tile1.nc
+  + c12_s2d00_t9z0gs3y0zh7w.tile2.nc
+  + c12_s2d00_t9z0gs3y0zh7w.tile3.nc
+  + c12_s2d00_t9z0gs3y0zh7w.tile4.nc
+  + c12_s2d00_t9z0gs3y0zh7w.tile5.nc
+  + c12_s2d00_t9z0gs3y0zh7w.tile6.nc
+
+Created 7 files.
+$ 
+```
+
+View the contents of a mosaic or tile file:
+```console
+$ gridspec-dump c24_gridspec.nc                                                                                                                                                                                                            🐍 sphinx
+Gridspec mosaic  (c24_gridspec, 6 tiles, 12 contacts)
+Tile files:      "c24.tile1.nc", "c24.tile2.nc", "c24.tile3.nc", "c24.tile4.nc",
+...              "c24.tile5.nc", "c24.tile6.nc"
+
+Gridspec tiles:
+  tile1       (49x49)      logical center (  0.0°N, 350.0°E)    approx area: 8.5e+07 km+2
+  tile2       (49x49)      logical center (  0.0°N,  80.0°E)    approx area: 8.5e+07 km+2
+  tile3       (49x49)      logical center ( 90.0°N, 350.0°E)    approx area: 8.5e+07 km+2
+  tile4       (49x49)      logical center (  0.0°N, 170.0°E)    approx area: 8.5e+07 km+2
+  tile5       (49x49)      logical center (  0.0°N, 260.0°E)    approx area: 8.5e+07 km+2
+  tile6       (49x49)      logical center (-90.0°N,  35.0°E)    approx area: 8.5e+07 km+2
+$ 
+```
 
 ## Contribute
-todo
+Submit pull requests to https://github.com/LiamBindle/gridspec. Please make sure to include tests for your PR.
 
-## Tests
-todo
+To set up a developement copy:
 
-## Credits
-todo
+1. Clone the repo
+   ```console
+   $ git clone https://github.com/LiamBindle/gridspec
+   ```
+2. Install as an editable package:
+   ```console
+   $ pip install -e gridspec/
+   ```
+ 
+### Tests
+Tests are implemented in `tests.py`. To run the tests, you need to install 
+[pytest](https://docs.pytest.org/en/stable/getting-started.html). Once pytest is installed, you can run the tests like
+so:
+```console
+$ pytest 
+```
