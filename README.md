@@ -93,7 +93,7 @@ Gridspec tiles:
 $ 
 ```
 
-## Contribute
+## Contributing
 Submit pull requests to https://github.com/LiamBindle/gridspec. Please make sure to include tests for your PR.
 
 To set up a developement copy:
