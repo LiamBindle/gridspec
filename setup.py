@@ -22,6 +22,7 @@ setup(
         [console_scripts]
         gridspec-create=gridspec.cli:create
         gridspec-utils=gridspec.cli:utils
+        gridspec-dump=gridspec.cli:dump
     """
 
 )

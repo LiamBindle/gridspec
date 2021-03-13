@@ -117,31 +117,39 @@ class GridspecTile:
         )
         return names_are_equal and attrs_are_equal and values_are_equal
 
-    def __str__(self):
-        center_idx0 = self.supergrid_lats.shape[0] // 2
-        center_idx1 = self.supergrid_lats.shape[1] // 2
-        center_lat = f"{round(self.supergrid_lats[center_idx0, center_idx1], 1)}°N"
-        center_lon = f"{round(self.supergrid_lons[center_idx0, center_idx1], 1)}°E"
-        center = f"({center_lat:>7s},{center_lon:>8s})"
-
+    def approx_area_km2(self):
         pt1 = (0, 0)
         pt2 = (0, -1)
         pt3 = (-1, -1)
         pt4 = (-1, 0)
-
         area = spherical_excess_area(
             np.deg2rad(self.supergrid_lats[pt1[0], pt1[1]]), np.deg2rad(self.supergrid_lons[pt1[0], pt1[1]]),
             np.deg2rad(self.supergrid_lats[pt2[0], pt2[1]]), np.deg2rad(self.supergrid_lons[pt2[0], pt2[1]]),
             np.deg2rad(self.supergrid_lats[pt3[0], pt3[1]]), np.deg2rad(self.supergrid_lons[pt3[0], pt3[1]]),
             np.deg2rad(self.supergrid_lats[pt4[0], pt4[1]]), np.deg2rad(self.supergrid_lons[pt4[0], pt4[1]]),
         ) / 1e6
+        return area
+
+    def logical_center_latlon(self):
+        center_idx0 = self.supergrid_lats.shape[0] // 2
+        center_idx1 = self.supergrid_lats.shape[1] // 2
+        lat = self.supergrid_lats[center_idx0, center_idx1]
+        lon = self.supergrid_lons[center_idx0, center_idx1]
+        return lat, lon
+
+    def __str__(self):
+        lat, lon = self.logical_center_latlon()
+        center_lat = f"{round(lat, 1)}°N"
+        center_lon = f"{round(lon, 1)}°E"
+        center = f"({center_lat:>7s},{center_lon:>8s})"
+
         text = "  {name:10s}  ({shape0}x{shape1})      logical center {center:20s}  approx area: {area:.1e} km+2"
         text = text.format(
             name=self.name,
             shape0=self.supergrid_lats.shape[0],
             shape1=self.supergrid_lats.shape[1],
             center=center,
-            area=area
+            area=self.approx_area_km2()
         )
         return text
 

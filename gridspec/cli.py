@@ -102,14 +102,10 @@ def sgcs(n, stretch_factor, target_point, output_dir):
     click.echo(f"\nCreated {len([mosaic_file,*tile_files])} files.")
 
 
-@click.group()
-def utils():
-    """A collection of gridspec utilities"""
-    pass
 
-@utils.command()
+@click.command()
 @click.argument('filepath', type=click.Path(exists=True, file_okay=True, dir_okay=False, writable=False, readable=True))
-def show(filepath):
+def dump(filepath):
     """Print information about a gridspec file
     """
     import xarray as xr
@@ -128,6 +124,10 @@ def show(filepath):
         else:
             raise click.BadParameter(f"{filepath} is not a gridspec tile or mosaic")
 
+@click.group()
+def utils():
+    """A collection of gridspec utilities"""
+    pass
 
 @utils.command()
 @click.argument('datafile',
