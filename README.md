@@ -110,10 +110,9 @@ To set up a developement copy:
    ```
  
 ### Tests
-Tests are implemented in `tests.py`. To run the tests, you need to install 
-[pytest](https://docs.pytest.org/en/stable/getting-started.html). Once pytest is installed, you can run the tests like
-so:
+To run the tests, you need to install [pytest](https://docs.pytest.org/en/stable/getting-started.html). 
+Once pytest is installed, you can run the tests like so (pytest test discovery is described 
+[here](https://docs.pytest.org/en/stable/goodpractices.html#conventions-for-python-test-discovery)):
 ```console
-$ cd gridspec/gridspec/
-$ pytest tests.py
+$ pytest
 ```

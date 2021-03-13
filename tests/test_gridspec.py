@@ -7,7 +7,8 @@ import gridspec
 from gridspec.misc.datafile_ops import split_datafile, join_datafiles, touch_datafiles
 from gridspec.cli import gcs, sgcs
 
-SAMPLE_C24_DATAFILE='../sample_data/GCHP.SpeciesConc.20180101_1200z.nc4'
+SAMPLE_C24_DATAFILE='GCHP.SpeciesConc.20180101_1200z.nc4'
+SAMPLE_C24_DATAFILE=Path(__file__).parent.joinpath(SAMPLE_C24_DATAFILE)
 
 
 def test_gridspec_save_and_load(tmp_path):
