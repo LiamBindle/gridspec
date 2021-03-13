@@ -21,11 +21,11 @@ def spherical_angle(v1, v2, v3):
     return np.arccos(np.dot(p, q)/d)
 
 
-def spherical_excess_area(radius,
-                          ll_phi, ll_lam,
+def spherical_excess_area(ll_phi, ll_lam,
                           ul_phi, ul_lam,
                           ur_phi, ur_lam,
-                          lr_phi, lr_lam):
+                          lr_phi, lr_lam,
+                          radius=6371000.):
     v1 = sph2cart(ll_phi, ll_lam)
     v2 = sph2cart(lr_phi, lr_lam)
     v3 = sph2cart(ul_phi, ul_lam)

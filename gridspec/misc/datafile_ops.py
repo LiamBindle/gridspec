@@ -1,11 +1,12 @@
 from pathlib import Path
+from typing import List
 
 import xarray as xr
 
 from gridspec.base import LoadGridspec
 
 
-def split_datafile(datafile, tile_dim, gridspec_file, directory=None):
+def split_datafile(datafile, tile_dim, gridspec_file, directory=None) -> List[str]:
     gridspec = LoadGridspec(gridspec_file)
     ds = xr.open_dataset(datafile)
 
@@ -19,18 +20,23 @@ def split_datafile(datafile, tile_dim, gridspec_file, directory=None):
     directory = Path(directory)
 
     # Split the files
+    split_file_paths=[]
     for i, tile_name in enumerate(gridspec.mosaic().tile_names):
         tile_ds = ds.isel(**{tile_dim: i})
         filename = f"{datafile_path.stem}.{tile_name}.nc"
-        tile_ds.to_netcdf(directory.joinpath(filename))
+        opath = str(directory.joinpath(filename))
+        tile_ds.to_netcdf(opath)
+        split_file_paths.append(opath)
+    return split_file_paths
 
 
 def touch_datafiles(gridspec_file, datafile_prefix, datafile_suffix='.nc', directory="./",
                     name_dim0='Ydim', name_dim1='Xdim',
-                    name_lat_coord='lats', name_lon_coord='lons'):
+                    name_lat_coord='lats', name_lon_coord='lons') -> List[str]:
     gridspec = LoadGridspec(gridspec_file)
     directory = Path(directory)
 
+    new_files=[]
     for tile in gridspec.tiles():
         lons = tile.supergrid_lons[1::2, 1::2]
         lats = tile.supergrid_lats[1::2, 1::2]
@@ -54,12 +60,16 @@ def touch_datafiles(gridspec_file, datafile_prefix, datafile_suffix='.nc', direc
         )
 
         filename = f"{datafile_prefix}.{tile.name}{datafile_suffix}"
-        ds.to_netcdf(directory.joinpath(filename))
+        opath = str(directory.joinpath(filename))
+        ds.to_netcdf(opath)
+        new_files.append(opath)
+    return new_files
+
 
 
 def join_datafiles(datafile_prefix, gridspec_file, tile_dim,
                    datafile_suffix='.nc', directory="./",
-                   rename_dict=None, coord_attrs_dict=None, transpose=None):
+                   rename_dict=None, coord_attrs_dict=None, transpose=None) -> str:
     gridspec = LoadGridspec(gridspec_file)
     directory = Path(directory)
 
@@ -83,5 +93,6 @@ def join_datafiles(datafile_prefix, gridspec_file, tile_dim,
         ds = ds.transpose(*transpose)
 
     filename = f"{datafile_prefix}{datafile_suffix}"
-    filepath = directory.joinpath(filename)
+    filepath = str(directory.joinpath(filename))
     ds.to_netcdf(filepath)
+    return filepath

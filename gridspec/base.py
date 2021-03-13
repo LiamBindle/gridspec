@@ -2,9 +2,12 @@ from abc import ABC, abstractmethod
 from typing import List, Tuple
 import os.path
 from pathlib import Path
+import textwrap
 
 import numpy as np
 import xarray as xr
+
+from gridspec.misc.geometry import spherical_excess_area
 
 def string_da(value, **attrs):
     da = xr.DataArray(data=value).astype('S255')
@@ -21,6 +24,7 @@ def string_array_da(values, dim, **attrs):
 def first_da_matching_standard_name(ds, standard_name):
     return ds.filter_by_attrs(standard_name=standard_name).to_array()[0]
 
+
 class MosaicFile:
     name_children = "gridtiles"
     name_contacts = "contacts"
@@ -35,6 +39,7 @@ class MosaicFile:
         self.tile_filenames = tile_filenames
         self.contacts = contacts
         self.contact_indices = contact_indices
+        self.this_files_path=None
 
     def tile_file_paths(self):
         """
@@ -86,8 +91,11 @@ class MosaicFile:
         ds.to_netcdf(opath)
         return opath
 
-    def load_netcdf(self, filepath):
-        ds = xr.open_dataset(filepath)
+    def load_netcdf(self, filepath, ds=None):
+        if ds is None:
+            ds = xr.open_dataset(filepath)
+        if 'mosaic' not in ds:
+            raise ValueError(f"{filepath} is not a gridspec mosaic")
         self.name = ds['mosaic'].item().decode()
         self.name_children = ds['mosaic'].attrs['children']
         self.name_contacts = ds['mosaic'].attrs['contact_regions']
@@ -116,6 +124,14 @@ class MosaicFile:
         )
         return names_are_equal and values_are_equal
 
+    def __str__(self):
+        msg = f"gridspec mosaic  ({self.name}, {len(self.tile_filenames)} tiles, {len(self.contacts)} contacts)"
+        msg2 =f"tile files:      "
+        msg2 += ", ".join([f'"{filepath}"' for filepath in self.tile_file_paths()])
+        msg2 = "\n...              ".join(textwrap.wrap(msg2, 80))
+        msg += "\n" + msg2
+        return msg
+
 
 class TileFile:
     name_ydim = 'yc'
@@ -135,11 +151,6 @@ class TileFile:
         ds['tile'] = string_da(
             self.name,
             **self.attrs
-            # geometry="spherical",
-            # north_pole="0.0 90.0",
-            # projection="cube_gnomonic",
-            # discretization="logically_rectangular",
-            # conformal="FALSE"
         )
         ds['x'] = xr.DataArray(
             self.supergrid_lons, dims=[self.name_ydim, self.name_xdim],
@@ -152,9 +163,12 @@ class TileFile:
         return ds
 
     def from_ds(self, ds):
+        if len(ds.filter_by_attrs(standard_name="grid_tile_spec")) != 1:
+            raise ValueError("Dataset is not a gridspec tile")
+        self.name = list(ds.filter_by_attrs(standard_name="grid_tile_spec").variables.values())[0].item().decode()
         self.attrs = list(ds.filter_by_attrs(standard_name="grid_tile_spec").variables.values())[0].attrs
-        self.supergrid_lats = first_da_matching_standard_name(ds, "geographic_latitude")
-        self.supergrid_lons = first_da_matching_standard_name(ds, "geographic_longitude")
+        self.supergrid_lats = first_da_matching_standard_name(ds, "geographic_latitude").values
+        self.supergrid_lons = first_da_matching_standard_name(ds, "geographic_longitude").values
 
     def __eq__(self, other):
         names_are_equal = (
@@ -168,6 +182,26 @@ class TileFile:
             np.allclose(self.supergrid_lons, other.supergrid_lons)
         )
         return names_are_equal and attrs_are_equal and values_are_equal
+
+    def __str__(self):
+        center_idx0 = self.supergrid_lats.shape[0] // 2
+        center_idx1 = self.supergrid_lats.shape[1] // 2
+        center_lat = f"{round(self.supergrid_lats[center_idx0, center_idx1], 1)}°N"
+        center_lon = f"{round(self.supergrid_lons[center_idx0, center_idx1], 1)}°E"
+        center = f"({center_lat:>7s},{center_lon:>8s})"
+
+        pt1 = (0, 0)
+        pt2 = (0, -1)
+        pt3 = (-1, -1)
+        pt4 = (-1, 0)
+
+        area = spherical_excess_area(
+            np.deg2rad(self.supergrid_lats[pt1[0], pt1[1]]), np.deg2rad(self.supergrid_lons[pt1[0], pt1[1]]),
+            np.deg2rad(self.supergrid_lats[pt2[0], pt2[1]]), np.deg2rad(self.supergrid_lons[pt2[0], pt2[1]]),
+            np.deg2rad(self.supergrid_lats[pt3[0], pt3[1]]), np.deg2rad(self.supergrid_lons[pt3[0], pt3[1]]),
+            np.deg2rad(self.supergrid_lats[pt4[0], pt4[1]]), np.deg2rad(self.supergrid_lons[pt4[0], pt4[1]]),
+        ) / 1e6
+        return f"  {self.name:10s}  ({self.supergrid_lats.shape[0]}x{self.supergrid_lats.shape[1]})      logical center {center:20s}  approx area: {area:.1e} km+2"
 
 
 class GridspecFactory(ABC):
@@ -193,16 +227,28 @@ class GridspecFactory(ABC):
     def mosaic(self) -> MosaicFile:
         pass
 
-    def save(self, directory=None) -> str:
+    def save(self, directory=None) -> Tuple[str, List[str]]:
         if directory is None:
             directory = Path.cwd()
         elif isinstance(directory, str):
             directory = Path(directory)
+        tile_paths = []
         for tile, tile_path in zip(self.tiles(), self.tile_file_paths(directory)):
             ds = tile.to_ds()
             ds.to_netcdf(tile_path)
+            tile_paths.append(tile_path)
         mosaic_path = self.mosaic().to_netcdf(directory)
-        return mosaic_path
+        return mosaic_path, tile_paths
+
+    def __str__(self):
+        msg = str(self.mosaic())
+        msg += f"\n\ngridspec tiles:"
+        for tile in self.tiles():
+            msg += f"\n{str(tile)}"
+        return msg
+
+    def __repr__(self):
+        return f"<gridspec.Gridspec>\n" + str(self)
 
 
 class LoadGridspec(GridspecFactory):
