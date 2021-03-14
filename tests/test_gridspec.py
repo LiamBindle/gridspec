@@ -5,7 +5,7 @@ from click.testing import CliRunner
 
 import gridspec
 from gridspec.misc.datafile_ops import split_datafile, join_datafiles, touch_datafiles
-from gridspec.cli import gcs, sgcs
+from gridspec.cli import gcs, sgcs, latlon
 
 SAMPLE_C24_DATAFILE='GCHP.SpeciesConc.20180101_1200z.nc4'
 SAMPLE_C24_DATAFILE=Path(__file__).parent.joinpath(SAMPLE_C24_DATAFILE)
@@ -59,4 +59,9 @@ def test_cli_create_gcs(tmp_path):
 def test_cli_create_sgcs(tmp_path):
     runner = CliRunner()
     result = runner.invoke(sgcs, ['10', '-s', '2.5', '-t', '25', '46', '-o', f'{str(tmp_path)}'])
+    assert result.exit_code == 0
+
+def test_cli_create_latlon(tmp_path):
+    runner = CliRunner()
+    result = runner.invoke(latlon, ['91', '180', '-o', f'{str(tmp_path)}'])
     assert result.exit_code == 0

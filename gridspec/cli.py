@@ -1,6 +1,6 @@
 import click
-from gridspec import GridspecGnomonicCubedSphere, load_mosaic
-from gridspec.base import GridspecMosaic, GridspecTile
+from gridspec import GridspecGnomonicCubedSphere, GridspecRegularLatLon, load_mosaic
+from gridspec.base import GridspecMosaic, GridspecTile, cwd_if_no_output_dir
 from gridspec.misc.datafile_ops import join_datafiles, split_datafile, touch_datafiles
 
 output_dir_option_posargs=('-o', '--output-dir')
@@ -102,6 +102,41 @@ def sgcs(n, stretch_factor, target_point, output_dir):
     click.echo(f"\nCreated {len([mosaic_file,*tile_files])} files.")
 
 
+@create.command()
+@click.argument('NY', type=click.IntRange(min=1))
+@click.argument('NX', type=click.IntRange(min=1))
+@click.option('-b', '--bbox',
+              type=click.FLOAT,
+              default=(-180, -90, 180, 90),
+              nargs=4,
+              metavar="XMIN YMIN XMAX YMAX",
+              help="Bounding box for the grid")
+@click.option(*output_dir_option_posargs, **output_dir_option_kwargs)
+def latlon(ny, nx, bbox, output_dir):
+    """Create a regular lat-lon grid.
+
+    NY is the number of latitude boxes. NX is the number of longitude boxes.
+    """
+    xmin = bbox[0]
+    ymin = bbox[1]
+    xmax = bbox[2]
+    ymax = bbox[3]
+    for y_bound in [ymax, ymin]:
+        if y_bound > 90 or y_bound < -90:
+            raise click.BadParameter("Invalid latitude in grid bounding box")
+    for x_bound in [xmax, xmin]:
+        if x_bound > 360 or x_bound < -180:
+            raise click.BadParameter("Invalid longitude in grid bounding box")
+    click.echo(f'Creating regular lat-lon grid.')
+    click.echo(f'  Latitude dimension:  {ny}')
+    click.echo(f'  Longitude dimension: {nx}')
+    tile = GridspecRegularLatLon(nx=nx, ny=ny, bbox=bbox)
+    click.echo('\nWriting mosaic and tile files.')
+    ofile = tile.to_netcdf(directory=output_dir)
+    click.echo(f'  + {ofile}')
+    click.echo(f"\nCreated 1 file.")
+
+
 
 @click.command()
 @click.argument('filepath', type=click.Path(exists=True, file_okay=True, dir_okay=False, writable=False, readable=True))
@@ -136,7 +171,7 @@ def utils():
 @click.option(*mosaic_file_posargs, **mosaic_file_kwargs)
 @click.option(*tile_dim_posargs, **tile_dim_kwargs)
 @click.option(*output_dir_option_posargs, **output_dir_option_kwargs)
-def split_datafile(datafile, mosaic, dim, output_dir):
+def split(datafile, mosaic, dim, output_dir):
     """
     Split a (stacked) data file into separate data files for each tile.
 
@@ -158,7 +193,7 @@ def split_datafile(datafile, mosaic, dim, output_dir):
               required=True,
               help="Path to gridspec mosaic")
 @click.option(*output_dir_option_posargs, **output_dir_option_kwargs)
-def new_datafiles(file_prefix, mosaic, output_dir):
+def touch(file_prefix, mosaic, output_dir):
     """
     Create new empty data files. This is useful for the --dstdatafile argument in ESMF_Regrid.
 
@@ -182,7 +217,7 @@ def new_datafiles(file_prefix, mosaic, output_dir):
               type=click.File(), metavar="JSONSPEC", required=True,
               help="The joining spec (JSON) file path")
 @click.option(*output_dir_option_posargs, **output_dir_option_kwargs)
-def join_datafiles(file_prefix, mosaic, dim, spec, output_dir):
+def join(file_prefix, mosaic, dim, spec, output_dir):
     """
     Create new empty data files. This is useful for the --dstdatafile argument in ESMF_Regrid.
 

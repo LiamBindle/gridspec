@@ -51,8 +51,8 @@ def cwd_if_no_output_dir(directory) -> Path:
 class GridspecTile:
     name_dim1 = 'yc'
     name_dim2 = 'xc'
-    name_lons = 'x'
-    name_lats = 'y'
+    name_lons = 'lons'
+    name_lats = 'lats'
     name_dummy = 'tile'
 
     def __init__(self, name=None, supergrid_lats=None, supergrid_lons=None, attrs=None):
@@ -70,12 +70,19 @@ class GridspecTile:
             self.name,
             **self.attrs
         )
+        if self.is_regular():
+            lon_dims = [self.name_lons]
+            lat_dims = [self.name_lats]
+        else:
+            lon_dims = [self.name_dim1, self.name_dim2]
+            lat_dims = [self.name_dim1, self.name_dim2]
+
         ds[self.name_lons] = xr.DataArray(
-            self.supergrid_lons, dims=[self.name_dim1, self.name_dim2],
+            self.supergrid_lons, dims=[*lon_dims],
             attrs=dict(standard_name="geographic_longitude", units="degree_east")
         )
         ds[self.name_lats] = xr.DataArray(
-            self.supergrid_lats, dims=[self.name_dim1, self.name_dim2],
+            self.supergrid_lats, dims=[*lat_dims],
             attrs=dict(standard_name="geographic_latitude", units="degree_north")
         )
         return ds
@@ -90,8 +97,12 @@ class GridspecTile:
         self.supergrid_lats = ds[self.name_lats].values
         self.name_lons = get_da_name(ds, standard_name="geographic_longitude")
         self.supergrid_lons = ds[self.name_lons].values
-        self.name_dim1 = ds[self.name_lons].dims[0]
-        self.name_dim2 = ds[self.name_lons].dims[1]
+        if self.is_regular():
+            self.name_dim1 = ds[self.name_lats].dims[0]
+            self.name_dim2 = ds[self.name_lons].dims[0]
+        else:
+            self.name_dim1 = ds[self.name_lons].dims[0]
+            self.name_dim2 = ds[self.name_lons].dims[1]
         return True
 
     def open_netcdf(self, filepath) -> bool:
@@ -117,41 +128,128 @@ class GridspecTile:
         )
         return names_are_equal and attrs_are_equal and values_are_equal
 
+    def get_corners(self) -> List[Tuple[float,float]]:
+        if self.is_regular():
+            pt1 = (self.supergrid_lats[0], self.supergrid_lons[0])
+            pt2 = (self.supergrid_lats[-1], self.supergrid_lons[0])
+            pt3 = (self.supergrid_lats[-1], self.supergrid_lons[-1])
+            pt4 = (self.supergrid_lats[0], self.supergrid_lons[-1])
+        else:
+            pt1 = (self.supergrid_lats[0, 0], self.supergrid_lons[0, 0])
+            pt2 = (self.supergrid_lats[0, -1], self.supergrid_lons[0, -1])
+            pt3 = (self.supergrid_lats[-1, -1], self.supergrid_lons[-1, -1])
+            pt4 = (self.supergrid_lats[-1, 0], self.supergrid_lons[-1, 0])
+        return [pt1, pt2, pt3, pt4]
+
     def approx_area_km2(self):
-        pt1 = (0, 0)
-        pt2 = (0, -1)
-        pt3 = (-1, -1)
-        pt4 = (-1, 0)
-        area = spherical_excess_area(
-            np.deg2rad(self.supergrid_lats[pt1[0], pt1[1]]), np.deg2rad(self.supergrid_lons[pt1[0], pt1[1]]),
-            np.deg2rad(self.supergrid_lats[pt2[0], pt2[1]]), np.deg2rad(self.supergrid_lons[pt2[0], pt2[1]]),
-            np.deg2rad(self.supergrid_lats[pt3[0], pt3[1]]), np.deg2rad(self.supergrid_lons[pt3[0], pt3[1]]),
-            np.deg2rad(self.supergrid_lats[pt4[0], pt4[1]]), np.deg2rad(self.supergrid_lons[pt4[0], pt4[1]]),
-        ) / 1e6
+        corners = np.deg2rad(self.get_corners())
+        area = spherical_excess_area(*corners[0], *corners[1], *corners[2], *corners[3]) / 1e6
         return area
 
     def logical_center_latlon(self):
-        center_idx0 = self.supergrid_lats.shape[0] // 2
-        center_idx1 = self.supergrid_lats.shape[1] // 2
-        lat = self.supergrid_lats[center_idx0, center_idx1]
-        lon = self.supergrid_lons[center_idx0, center_idx1]
+        if self.is_regular():
+            lat = self.supergrid_lats[self.supergrid_lats.shape[0] // 2]
+            lon = self.supergrid_lons[self.supergrid_lons.shape[0] // 2]
+        else:
+            center_idx0 = self.supergrid_lats.shape[0] // 2
+            center_idx1 = self.supergrid_lats.shape[1] // 2
+            lat = self.supergrid_lats[center_idx0, center_idx1]
+            lon = self.supergrid_lons[center_idx0, center_idx1]
         return lat, lon
+
+    def get_shape(self):
+        shape0 = self.supergrid_lats.shape[0]
+        shape1 = self.supergrid_lons.shape[0] if self.is_regular() else self.supergrid_lats.shape[1]
+        return shape0, shape1
 
     def __str__(self):
         lat, lon = self.logical_center_latlon()
         center_lat = f"{round(lat, 1)}°N"
         center_lon = f"{round(lon, 1)}°E"
         center = f"({center_lat:>7s},{center_lon:>8s})"
-
         text = "  {name:10s}  ({shape0}x{shape1})      logical center {center:20s}  approx area: {area:.1e} km+2"
+        shape0, shape1 = self.get_shape()
         text = text.format(
             name=self.name,
-            shape0=self.supergrid_lats.shape[0],
-            shape1=self.supergrid_lats.shape[1],
+            shape0=shape0,
+            shape1=shape1,
             center=center,
             area=self.approx_area_km2()
         )
         return text
+
+    def is_regular(self) -> bool:
+        return len(self.supergrid_lats.shape) == 1
+
+    def is_curvilinear(self) -> bool:
+        return not self.is_regular()
+
+
+class CFSingleTile(GridspecTile):
+    name_dim1 = 'i'
+    name_dim2 = 'j'
+    name_bnds = 'bounds'
+    name_lons = 'lon'
+    name_lats = 'lat'
+    name_dummy = 'tile'
+    name_lat_bnds = 'lat_bnds'
+    name_lon_bnds = 'lon_bnds'
+
+    def __init__(self, *args, **kwargs):
+        self.center_lats = kwargs.pop('center_lats', None)
+        self.center_lons = kwargs.pop('center_lons', None)
+        self.lat_bnds = kwargs.pop('lat_bnds', None)
+        self.lon_bnds = kwargs.pop('lon_bnds', None)
+        super().__init__(*args, **kwargs)
+
+    def dump(self) -> xr.Dataset:
+        ds = xr.Dataset()
+
+        if self.is_regular():
+            lons_dims=[self.name_lons]
+            lats_dims=[self.name_lats]
+        else:
+            lons_dims=[self.name_dim1, self.name_dim2]
+            lats_dims=[self.name_dim1, self.name_dim2]
+
+        ds[self.name_lon_bnds] = xr.DataArray(self.lon_bnds, dims=[*lons_dims, self.name_bnds])
+        ds[self.name_lat_bnds] = xr.DataArray(self.lat_bnds, dims=[*lats_dims, self.name_bnds])
+
+        ds[self.name_lons] = xr.DataArray(
+            self.center_lons, dims=[*lons_dims],
+            attrs=dict(
+                standard_name="geographic_longitude",
+                units="degree_east",
+                bounds=self.name_lon_bnds,
+            )
+        )
+        ds[self.name_lats] = xr.DataArray(
+            self.center_lats, dims=[*lats_dims],
+            attrs=dict(
+                standard_name="geographic_latitude",
+                units="degree_north",
+                bounds=self.name_lat_bnds,
+            )
+        )
+        return ds
+
+    def to_netcdf(self, directory):
+        directory = cwd_if_no_output_dir(directory)
+        ds = self.dump()
+        opath = str(directory.joinpath(f'{self.name}.nc'))
+        ds.to_netcdf(opath)
+        return opath
+
+    def init_from_supergrid(self):
+        if self.is_regular():
+            self.center_lats = self.supergrid_lats[1::2]
+            self.center_lons = self.supergrid_lons[1::2]
+            lat_bnds = self.supergrid_lats[0::2]
+            self.lat_bnds = np.transpose([lat_bnds[:-1], lat_bnds[1:]])
+            lon_bnds = self.supergrid_lons[0::2]
+            self.lon_bnds = np.transpose([lon_bnds[:-1], lon_bnds[1:]])
+        else:
+            raise NotImplementedError("Not implemented yet")
 
 
 class GridspecMosaic:
