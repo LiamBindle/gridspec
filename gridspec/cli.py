@@ -1,6 +1,6 @@
 import click
 from gridspec import GridspecGnomonicCubedSphere, GridspecRegularLatLon, load_mosaic
-from gridspec.base import GridspecMosaic, GridspecTile, cwd_if_no_output_dir
+from gridspec.base import GridspecMosaic, GridspecTile, CFSingleTile
 from gridspec.misc.datafile_ops import join_datafiles, split_datafile, touch_datafiles
 
 output_dir_option_posargs=('-o', '--output-dir')
@@ -151,13 +151,21 @@ def dump(filepath):
     if is_mosaic:
         mosaic = load_mosaic(filepath)  # load_mosaic also loads all the tiles
         print(mosaic)
-    else:
-        tile = GridspecTile()
-        is_tile = tile.load(ds)
-        if is_tile:
-            print(tile)
-        else:
-            raise click.BadParameter(f"{filepath} is not a gridspec tile or mosaic")
+        return
+
+    tile = GridspecTile()
+    is_tile = tile.load(ds)
+    if is_tile:
+        print(tile)
+        return
+
+    cf_single_tile = CFSingleTile()
+    is_cf_single_tile = cf_single_tile.load(ds)
+    if is_cf_single_tile:
+        print(cf_single_tile)
+        return
+
+    raise click.BadParameter(f"{filepath} is not a gridspec tile or mosaic")
 
 @click.group()
 def utils():

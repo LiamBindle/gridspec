@@ -185,73 +185,6 @@ class GridspecTile:
         return not self.is_regular()
 
 
-class CFSingleTile(GridspecTile):
-    name_dim1 = 'i'
-    name_dim2 = 'j'
-    name_bnds = 'bounds'
-    name_lons = 'lon'
-    name_lats = 'lat'
-    name_dummy = 'tile'
-    name_lat_bnds = 'lat_bnds'
-    name_lon_bnds = 'lon_bnds'
-
-    def __init__(self, *args, **kwargs):
-        self.center_lats = kwargs.pop('center_lats', None)
-        self.center_lons = kwargs.pop('center_lons', None)
-        self.lat_bnds = kwargs.pop('lat_bnds', None)
-        self.lon_bnds = kwargs.pop('lon_bnds', None)
-        super().__init__(*args, **kwargs)
-
-    def dump(self) -> xr.Dataset:
-        ds = xr.Dataset()
-
-        if self.is_regular():
-            lons_dims=[self.name_lons]
-            lats_dims=[self.name_lats]
-        else:
-            lons_dims=[self.name_dim1, self.name_dim2]
-            lats_dims=[self.name_dim1, self.name_dim2]
-
-        ds[self.name_lon_bnds] = xr.DataArray(self.lon_bnds, dims=[*lons_dims, self.name_bnds])
-        ds[self.name_lat_bnds] = xr.DataArray(self.lat_bnds, dims=[*lats_dims, self.name_bnds])
-
-        ds[self.name_lons] = xr.DataArray(
-            self.center_lons, dims=[*lons_dims],
-            attrs=dict(
-                standard_name="geographic_longitude",
-                units="degree_east",
-                bounds=self.name_lon_bnds,
-            )
-        )
-        ds[self.name_lats] = xr.DataArray(
-            self.center_lats, dims=[*lats_dims],
-            attrs=dict(
-                standard_name="geographic_latitude",
-                units="degree_north",
-                bounds=self.name_lat_bnds,
-            )
-        )
-        return ds
-
-    def to_netcdf(self, directory):
-        directory = cwd_if_no_output_dir(directory)
-        ds = self.dump()
-        opath = str(directory.joinpath(f'{self.name}.nc'))
-        ds.to_netcdf(opath)
-        return opath
-
-    def init_from_supergrid(self):
-        if self.is_regular():
-            self.center_lats = self.supergrid_lats[1::2]
-            self.center_lons = self.supergrid_lons[1::2]
-            lat_bnds = self.supergrid_lats[0::2]
-            self.lat_bnds = np.transpose([lat_bnds[:-1], lat_bnds[1:]])
-            lon_bnds = self.supergrid_lons[0::2]
-            self.lon_bnds = np.transpose([lon_bnds[:-1], lon_bnds[1:]])
-        else:
-            raise NotImplementedError("Not implemented yet")
-
-
 class GridspecMosaic:
     name_children = "gridtiles"
     name_contacts = "contacts"
@@ -403,6 +336,115 @@ class GridspecMosaic:
         for tile in self.tiles:
             text += f"\n{str(tile)}"
         return text
+
+
+class CFSingleTile:
+    name_dim1 = 'i'
+    name_dim2 = 'j'
+    name_bnds = 'bounds'
+    name_lons = 'lon'
+    name_lats = 'lat'
+    name_lat_bnds = 'lat_bnds'
+    name_lon_bnds = 'lon_bnds'
+
+    def __init__(self, name=None, center_lats=None, center_lons=None, lat_bnds=None, lon_bnds=None):
+        self.name = name
+        self.center_lats = center_lats
+        self.center_lons = center_lons
+        self.lat_bnds = lat_bnds
+        self.lon_bnds = lon_bnds
+
+    def is_regular(self) -> bool:
+        return len(self.center_lats.shape) == 1
+
+    def is_curvilinear(self) -> bool:
+        return not self.is_regular()
+
+    def dump(self) -> xr.Dataset:
+        ds = xr.Dataset()
+
+        if self.is_regular():
+            lons_dims = [self.name_lons]
+            lats_dims = [self.name_lats]
+        else:
+            lons_dims = [self.name_dim1, self.name_dim2]
+            lats_dims = [self.name_dim1, self.name_dim2]
+
+        ds[self.name_lon_bnds] = xr.DataArray(self.lon_bnds, dims=[*lons_dims, self.name_bnds])
+        ds[self.name_lat_bnds] = xr.DataArray(self.lat_bnds, dims=[*lats_dims, self.name_bnds])
+
+        ds[self.name_lons] = xr.DataArray(
+            self.center_lons, dims=[*lons_dims],
+            attrs=dict(
+                standard_name="geographic_longitude",
+                units="degree_east",
+                bounds=self.name_lon_bnds,
+            )
+        )
+        ds[self.name_lats] = xr.DataArray(
+            self.center_lats, dims=[*lats_dims],
+            attrs=dict(
+                standard_name="geographic_latitude",
+                units="degree_north",
+                bounds=self.name_lat_bnds,
+            )
+        )
+        return ds
+
+    def load(self, ds) -> bool:
+        # CFSingleTile if "units"==degree_east with attribute "bounds" (and same for lat)
+        degrees_east_vars = list(ds.filter_by_attrs(units='degree_east').variables)
+        degrees_north_vars = list(ds.filter_by_attrs(units='degree_north').variables)
+        is_cf_single_tile = (
+                len(degrees_east_vars) == 1 and len(degrees_north_vars) == 1 and
+                'bounds' in ds[degrees_east_vars[0]].attrs and
+                'bounds' in ds[degrees_north_vars[0]].attrs
+        )
+        if not is_cf_single_tile:
+            return False
+
+        self.name_lons = degrees_east_vars[0]
+        self.name_lats = degrees_north_vars[0]
+        self.name_lon_bnds = ds[degrees_east_vars[0]].attrs['bounds']
+        self.name_lat_bnds = ds[degrees_north_vars[0]].attrs['bounds']
+        self.name_bnds = ds[self.name_lat_bnds].dims[-1]
+
+        self.center_lons = ds[self.name_lons].values
+        self.center_lats = ds[self.name_lats].values
+        self.lat_bnds = ds[self.name_lat_bnds].values
+        self.lon_bnds = ds[self.name_lon_bnds].values
+
+        if len(self.center_lons.shape) != 1:
+            self.name_dim1, self.name_dim2 = ds[self.name_lons].dims[:2]
+        return True
+
+    def to_netcdf(self, directory):
+        directory = cwd_if_no_output_dir(directory)
+        ds = self.dump()
+        opath = str(directory.joinpath(f'{self.name}.nc'))
+        ds.to_netcdf(opath)
+        return opath
+
+    def init_from_supergrids(self, supergrid_lats, supergrid_lons):
+        if len(supergrid_lats.shape) == 1: # regular grid
+            self.center_lats = supergrid_lats[1::2]
+            self.center_lons = supergrid_lons[1::2]
+            lat_bnds = supergrid_lats[0::2]
+            self.lat_bnds = np.transpose([lat_bnds[:-1], lat_bnds[1:]])
+            lon_bnds = supergrid_lons[0::2]
+            self.lon_bnds = np.transpose([lon_bnds[:-1], lon_bnds[1:]])
+        else:
+            raise NotImplementedError("Not implemented yet")
+
+    def __str__(self):
+        minlon = f"{round(np.min(self.lon_bnds), 1)}°E"
+        maxlon = f"{round(np.max(self.lon_bnds), 1)}°E"
+        minlat = f"{round(np.min(self.lat_bnds), 1)}°N"
+        maxlat = f"{round(np.max(self.lat_bnds), 1)}°N"
+        bbox = f"({minlon:>8s},{minlat:>7s},{maxlon:>8s},{maxlat:>7s})"
+        shape0 = self.center_lats.shape[0]
+        shape1 = self.center_lons.shape[-1]
+        return f"CFSingleTile  ({shape0}x{shape1})      bounding box: {bbox}"
 
 
 def load_mosaic(filename, load_tiles=True):

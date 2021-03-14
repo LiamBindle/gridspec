@@ -9,8 +9,8 @@ class GridspecRegularLatLon(CFSingleTile):
         name = name.format(**filler_dict)
         supergrid_lons = np.linspace(bbox[0], bbox[2], nx*2+1)
         supergrid_lats = np.linspace(bbox[1], bbox[3], ny*2+1)
-        super().__init__(name=name, supergrid_lats=supergrid_lats, supergrid_lons=supergrid_lons)
-        self.init_from_supergrid()
+        super().__init__(name=name)
+        self.init_from_supergrids(supergrid_lats, supergrid_lons)
 
 
 if __name__ == '__main__':
