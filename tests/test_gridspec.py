@@ -4,6 +4,8 @@ import xarray as xr
 from click.testing import CliRunner
 
 import gridspec
+from gridspec.gnom_cube_sphere.gcs_gridspec import GridspecGnomonicCubedSphere
+from gridspec.base import load_mosaic
 from gridspec.misc.datafile_ops import split_datafile, join_datafiles, touch_datafiles
 from gridspec.cli import gcs, sgcs, latlon
 
@@ -12,16 +14,16 @@ SAMPLE_C24_DATAFILE=Path(__file__).parent.joinpath(SAMPLE_C24_DATAFILE)
 
 
 def test_gridspec_save_and_load(tmp_path):
-    mosaic = gridspec.GridspecGnomonicCubedSphere(12)
+    mosaic = GridspecGnomonicCubedSphere(12)
     fpath, _ = mosaic.to_netcdf(directory=tmp_path)
-    mosaic2 = gridspec.load_mosaic(fpath)
+    mosaic2 = load_mosaic(fpath)
     assert mosaic == mosaic2
     for t1, t2 in zip(mosaic.tiles, mosaic2.tiles):
         assert t1 == t2
 
 
 def test_gridspec_split_files(tmp_path):
-    mosaic = gridspec.GridspecGnomonicCubedSphere(24)
+    mosaic = GridspecGnomonicCubedSphere(24)
     gridspec_path, _ = mosaic.to_netcdf(directory=tmp_path)
 
     split_files = split_datafile(SAMPLE_C24_DATAFILE, tile_dim='nf', gridspec_file=gridspec_path, directory=tmp_path)
@@ -42,7 +44,7 @@ def test_gridspec_split_files(tmp_path):
 
 
 def test_touch_dstdatafiles(tmp_path):
-    mosaic = gridspec.GridspecGnomonicCubedSphere(12)
+    mosaic = GridspecGnomonicCubedSphere(12)
     gridspec_path, _ = mosaic.to_netcdf(directory=tmp_path)
 
     new_files = touch_datafiles(gridspec_path, 'c12_datafiles', directory=tmp_path)
