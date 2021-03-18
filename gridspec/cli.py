@@ -1,6 +1,7 @@
 import click
-from gridspec import GridspecGnomonicCubedSphere, GridspecRegularLatLon, load_mosaic
-from gridspec.base import GridspecMosaic, GridspecTile, CFSingleTile
+from gridspec.gnom_cube_sphere.gcs_gridspec import GridspecGnomonicCubedSphere
+from gridspec.latlon import GridspecRegularLatLon
+from gridspec.base import GridspecMosaic, GridspecTile, CFSingleTile, load_mosaic
 from gridspec.misc.datafile_ops import join_datafiles, split_datafile, touch_datafiles
 
 output_dir_option_posargs=('-o', '--output-dir')

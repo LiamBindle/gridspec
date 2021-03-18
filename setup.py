@@ -10,7 +10,7 @@ setup(
     project_urls={
         "Bug Tracker": "https://github.com/LiamBindle/gridspec/issues",
     },
-    py_modules=['gridspec'],
+    packages=['gridspec', 'gridspec.misc', 'gridspec.gnom_cube_sphere'],
     install_requires=[
         'pygeohash',
         'netcdf4',
@@ -23,6 +23,7 @@ setup(
         gridspec-create=gridspec.cli:create
         gridspec-utils=gridspec.cli:utils
         gridspec-dump=gridspec.cli:dump
-    """
+    """,
+    python_requires='>=3.6',
 
 )

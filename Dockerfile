@@ -7,4 +7,4 @@ RUN /opt/conda/bin/conda install python=3 pip \
 &&  /opt/conda/bin/conda clean -afy
 
 COPY . /gridspec
-RUN cd /gridspec && /opt/conda/bin/pip install .
+RUN cd /gridspec && . /opt/conda/bin/activate && python -m pip install .
