@@ -14,6 +14,16 @@ class GridspecRegularLatLon(CFSingleTile):
 
 
 if __name__ == '__main__':
-    tile = GridspecRegularLatLon(180, 91)
-    tile.to_netcdf(f'/home/liam/dev/gridspec/scratch')
+    tile = GridspecRegularLatLon(1152, 720)
+    tile._update_supergrids()
+    area = tile._calc_area()
+
+    print('area for ', tile)
+    print(f'    min res.:     {np.sqrt(area.max()/1e6):.1f} km')
+    print(f'    max res.:     {np.sqrt(area.min()/1e6):.1f} km')
+    print(f'    mean res.:    {np.sqrt(area.mean()/1e6):.1f} km')
+    print(f'    dim0 spacing: {np.diff(tile.lat_bnds[0,:]).item():.4f}°N')
+    print(f'    dim1 spacing: {np.diff(tile.lon_bnds[0,:]).item():.4f}°E')
+
+    #tile.to_netcdf(f'/home/liam/dev/gridspec/scratch')
     # tile.to_netcdf(f'/home/liam/dev/gridspec/scratch/{tile.name}.nc')

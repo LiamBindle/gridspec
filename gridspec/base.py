@@ -48,7 +48,45 @@ def cwd_if_no_output_dir(directory) -> Path:
     return Path(directory)
 
 
-class GridspecTile:
+class LogicallyRectangularGrid:
+    def __init__(self, supergrid_lats=None, supergrid_lons=None):
+        self.supergrid_lats = supergrid_lats
+        self.supergrid_lons = supergrid_lons
+
+    @property
+    def supergrid_lats(self) -> np.ndarray:
+        return self._supergrid_lats
+
+    @supergrid_lats.setter
+    def supergrid_lats(self, v):
+        self._supergrid_lats = v
+
+    @property
+    def supergrid_lons(self) -> np.ndarray:
+        return self._supergrid_lons
+
+    @supergrid_lons.setter
+    def supergrid_lons(self, v):
+        self._supergrid_lons = v
+
+    def _calc_area(self) -> np.ndarray:
+        ni = self.supergrid_lats.shape[0] // 2
+        nj = self.supergrid_lats.shape[1] // 2
+
+        area = np.ndarray((ni, nj))
+        from tqdm import tqdm
+        for i in tqdm(range(ni)):
+            for j in range(nj):
+                pt1 = (self.supergrid_lats[2*i, 2*j], self.supergrid_lons[2*i, 2*j])
+                pt2 = (self.supergrid_lats[2*(i+1), 2*j], self.supergrid_lons[2*(i+1), 2*j])
+                pt3 = (self.supergrid_lats[2*(i+1), 2*(j+1)], self.supergrid_lons[2*(i+1), 2*(j+1)])
+                pt4 = (self.supergrid_lats[2*i, 2*(j+1)], self.supergrid_lons[2*i, 2*(j+1)])
+                corners = np.deg2rad([pt1, pt2, pt3, pt4])
+                area[i, j] = spherical_excess_area(*corners[0], *corners[1], *corners[2], *corners[3])
+        return area
+
+
+class GridspecTile(LogicallyRectangularGrid):
     name_dim1 = 'yc'
     name_dim2 = 'xc'
     name_lons = 'lons'
@@ -57,8 +95,7 @@ class GridspecTile:
 
     def __init__(self, name=None, supergrid_lats=None, supergrid_lons=None, attrs=None):
         self.name = name
-        self.supergrid_lats = supergrid_lats
-        self.supergrid_lons = supergrid_lons
+        super().__init__(supergrid_lats=supergrid_lats, supergrid_lons=supergrid_lons)
         self.attrs = attrs
         if self.attrs is None:
             self.attrs = {}
@@ -338,7 +375,7 @@ class GridspecMosaic:
         return text
 
 
-class CFSingleTile:
+class CFSingleTile(LogicallyRectangularGrid):
     name_dim1 = 'i'
     name_dim2 = 'j'
     name_bnds = 'bounds'
@@ -348,6 +385,7 @@ class CFSingleTile:
     name_lon_bnds = 'lon_bnds'
 
     def __init__(self, name=None, center_lats=None, center_lons=None, lat_bnds=None, lon_bnds=None):
+        super().__init__()
         self.name = name
         self.center_lats = center_lats
         self.center_lons = center_lons
@@ -445,6 +483,25 @@ class CFSingleTile:
         shape0 = self.center_lats.shape[0]
         shape1 = self.center_lons.shape[-1]
         return f"CFSingleTile  ({shape0}x{shape1})      bounding box: {bbox}"
+
+    def _update_supergrids(self):
+        if self.is_regular():
+            nlats = self.center_lats.shape[0]
+            nlons = self.center_lons.shape[0]
+            supergrid_lats = np.ndarray((nlats*2+1, nlons*2+1))
+            supergrid_lons = np.ndarray((nlats*2+1, nlons*2+1))
+            center_lats, center_lons = np.meshgrid(self.center_lats, self.center_lons, indexing='ij')
+            lat_bnds = np.append(self.lat_bnds[:, 0], self.lat_bnds[-1, 1])
+            lon_bnds = np.append(self.lon_bnds[:, 0], self.lon_bnds[-1, 1])
+            lat_bnds, lon_bnds = np.meshgrid(lat_bnds, lon_bnds, indexing='ij')
+            supergrid_lats[0::2, 0::2] = lat_bnds
+            supergrid_lats[1::2, 1::2] = center_lats
+            supergrid_lons[0::2, 0::2] = lon_bnds
+            supergrid_lons[1::2, 1::2] = center_lons
+            self.supergrid_lats = supergrid_lats
+            self.supergrid_lons = supergrid_lons
+        else:
+            raise NotImplementedError("Not implemented yet")
 
 
 def load_mosaic(filename, load_tiles=True):

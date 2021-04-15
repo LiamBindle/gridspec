@@ -119,3 +119,17 @@ class GridspecGnomonicCubedSphere(GridspecMosaic):
             f"{cs_size*2}:{cs_size*2},1:{cs_size*2}::1:1,1:{cs_size*2}"
         ]
         return contact_indices
+
+if __name__ == '__main__':
+    import numpy as np
+    mosaic = GridspecGnomonicCubedSphere(60)
+    tile = mosaic.tiles[0]
+    area = tile._calc_area()
+
+    print('area for ', tile)
+    print(f'    min res.:     {np.sqrt(area.max()/1e6):.1f} km')
+    print(f'    max res.:     {np.sqrt(area.min()/1e6):.1f} km')
+    print(f'    mean res.:    {np.sqrt(area.mean()/1e6):.1f} km')
+
+    #tile.to_netcdf(f'/home/liam/dev/gridspec/scratch')
+    # tile.to_netcdf(f'/home/liam/dev/gridspec/scratch/{tile.name}.nc')
