@@ -37,8 +37,8 @@ def test_gridspec_split_files(tmp_path):
     )
     assert Path(joined_file).exists()
 
-    original = xr.open_dataset(SAMPLE_C24_DATAFILE).drop('cubed_sphere')
-    joined = xr.open_dataset(joined_file).drop('cubed_sphere')
+    original = xr.open_dataset(SAMPLE_C24_DATAFILE).drop_vars('cubed_sphere')
+    joined = xr.open_dataset(joined_file).drop_vars('cubed_sphere')
     assert joined.identical(original)
 
 
