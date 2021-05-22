@@ -4,9 +4,22 @@ from gridspec.base import CFSingleTile
 
 
 class GridspecRegularLatLon(CFSingleTile):
-    def __init__(self, nx, ny, name='regular_lat_lon_{ny}x{nx}', bbox=(-180, -90, 180, 90)):
+    def __init__(self, nx, ny, name='regular_lat_lon_{ny}x{nx}',
+                 bbox=(-180, -90, 180, 90), pole_centered=False, dateline_centered=False):
         filler_dict=dict(nx=nx, ny=ny)
         name = name.format(**filler_dict)
+
+        bbox = list(bbox)
+        if pole_centered:
+            dy = (bbox[3] - bbox[1])/(ny-1)
+            bbox[1] -= dy/2
+            bbox[3] += dy/2
+
+        if dateline_centered:
+            dx = (bbox[2] - bbox[0])/nx
+            bbox[0] -= dx/2
+            bbox[2] -= dx/2
+
         supergrid_lons = np.linspace(bbox[0], bbox[2], nx*2+1)
         supergrid_lats = np.linspace(bbox[1], bbox[3], ny*2+1)
         super().__init__(name=name)
@@ -14,7 +27,7 @@ class GridspecRegularLatLon(CFSingleTile):
 
 
 if __name__ == '__main__':
-    tile = GridspecRegularLatLon(1152, 720)
+    tile = GridspecRegularLatLon(576, 361, dateline_centered=True)
     tile._update_supergrids()
     area = tile._calc_area()
 

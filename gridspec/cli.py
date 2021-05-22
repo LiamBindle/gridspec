@@ -112,26 +112,39 @@ def sgcs(n, stretch_factor, target_point, output_dir):
               nargs=4,
               metavar="XMIN YMIN XMAX YMAX",
               help="Bounding box for the grid")
+@click.option('-pe/-pc', '--polar-edge/--pole-centered',
+              default=True,
+              help="Specifies pole-centered or polar edges. Default is --polar-edge.")
+@click.option('-de/-dc', '--dateline-edge/--dateline-centered',
+              default=True,
+              help="Specifies dateline-centered or a dateline edge. Default is --dateline-edge.")
 @click.option(*output_dir_option_posargs, **output_dir_option_kwargs)
-def latlon(ny, nx, bbox, output_dir):
+def latlon(ny, nx, bbox, polar_edge, dateline_edge, output_dir):
     """Create a regular lat-lon grid.
 
     NY is the number of latitude boxes. NX is the number of longitude boxes.
     """
+    pole_centered = not polar_edge
+    dateline_centered = not dateline_edge
     xmin = bbox[0]
     ymin = bbox[1]
     xmax = bbox[2]
     ymax = bbox[3]
     for y_bound in [ymax, ymin]:
         if y_bound > 90 or y_bound < -90:
-            raise click.BadParameter("Invalid latitude in grid bounding box")
+            raise click.BadParameter("Invalid latitude in grid bounding box. Latitudes must be in [-90, 90].")
     for x_bound in [xmax, xmin]:
         if x_bound > 360 or x_bound < -180:
-            raise click.BadParameter("Invalid longitude in grid bounding box")
+            raise click.BadParameter("Invalid longitude in grid bounding box. Longitudes must be in [-180, 360].")
     click.echo(f'Creating regular lat-lon grid.')
     click.echo(f'  Latitude dimension:  {ny}')
     click.echo(f'  Longitude dimension: {nx}')
-    tile = GridspecRegularLatLon(nx=nx, ny=ny, bbox=bbox)
+    click.echo(f'  Pole-centered:       {pole_centered}')
+    click.echo(f'  Dateline-centered:   {dateline_centered}')
+    tile = GridspecRegularLatLon(
+        nx=nx, ny=ny, bbox=bbox,
+        pole_centered=pole_centered, dateline_centered=dateline_centered
+    )
     click.echo('\nWriting mosaic and tile files.')
     ofile = tile.to_netcdf(directory=output_dir)
     click.echo(f'  + {ofile}')
