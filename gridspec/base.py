@@ -110,6 +110,9 @@ class GridspecTile(LogicallyRectangularGrid):
     name_lons = 'lons'
     name_lats = 'lats'
     name_dummy = 'tile'
+    name_area = 'area'
+    name_area_dim1 = 'y'
+    name_area_dim2 = 'x'
 
     def __init__(self, name=None, supergrid_lats=None, supergrid_lons=None, attrs=None):
         self.name = name
@@ -139,6 +142,10 @@ class GridspecTile(LogicallyRectangularGrid):
         ds[self.name_lats] = xr.DataArray(
             self.supergrid_lats, dims=[*lat_dims],
             attrs=dict(standard_name="geographic_latitude", units="degree_north")
+        )
+        ds[self.name_area] = xr.DataArray(
+            self.area, dims=[self.name_area_dim1, self.name_area_dim2],
+            attrs=dict(standard_name="cell_area", units="m2")
         )
         return ds
 

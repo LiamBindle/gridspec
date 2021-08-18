@@ -22,6 +22,10 @@ class GridspecRegularLatLon(CFSingleTile):
 
         supergrid_lons = np.linspace(bbox[0], bbox[2], nx*2+1)
         supergrid_lats = np.linspace(bbox[1], bbox[3], ny*2+1)
+
+        if pole_centered:  # restrict bounds to [-90, 90]; agrees with ESMF_RegridWeightGen
+            supergrid_lats = np.clip(supergrid_lats, -90, 90)
+
         super().__init__(name=name)
         self.init_from_supergrids(supergrid_lats, supergrid_lons)
 
