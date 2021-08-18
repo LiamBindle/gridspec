@@ -52,6 +52,7 @@ class LogicallyRectangularGrid:
     def __init__(self, supergrid_lats=None, supergrid_lons=None):
         self.supergrid_lats = supergrid_lats
         self.supergrid_lons = supergrid_lons
+        self.area = None
 
     @property
     def supergrid_lats(self) -> np.ndarray:
@@ -69,20 +70,37 @@ class LogicallyRectangularGrid:
     def supergrid_lons(self, v):
         self._supergrid_lons = v
 
-    def _calc_area(self) -> np.ndarray:
-        ni = self.supergrid_lats.shape[0] // 2
-        nj = self.supergrid_lats.shape[1] // 2
+    @property
+    def area(self) -> np.ndarray:
+        if self._area is None:
+            self.area = self._calc_area()
+        return self._area
 
-        area = np.ndarray((ni, nj))
-        from tqdm import tqdm
-        for i in tqdm(range(ni)):
-            for j in range(nj):
-                pt1 = (self.supergrid_lats[2*i, 2*j], self.supergrid_lons[2*i, 2*j])
-                pt2 = (self.supergrid_lats[2*(i+1), 2*j], self.supergrid_lons[2*(i+1), 2*j])
-                pt3 = (self.supergrid_lats[2*(i+1), 2*(j+1)], self.supergrid_lons[2*(i+1), 2*(j+1)])
-                pt4 = (self.supergrid_lats[2*i, 2*(j+1)], self.supergrid_lons[2*i, 2*(j+1)])
-                corners = np.deg2rad([pt1, pt2, pt3, pt4])
-                area[i, j] = spherical_excess_area(*corners[0], *corners[1], *corners[2], *corners[3])
+    @area.setter
+    def area(self, areas):
+        self._area = areas
+
+    def _calc_area(self) -> np.ndarray:
+        upper = slice(0, -2, 2)
+        lower = slice(2, None, 2)
+        left = slice(0, -2, 2)
+        right = slice(2, None, 2)
+        phi1 = self.supergrid_lats[upper, left]
+        phi2 = self.supergrid_lats[lower, left]
+        phi3 = self.supergrid_lats[lower, right]
+        phi4 = self.supergrid_lats[upper, right]
+
+        lam1 = self.supergrid_lons[upper, left]
+        lam2 = self.supergrid_lons[lower, left]
+        lam3 = self.supergrid_lons[lower, right]
+        lam4 = self.supergrid_lons[upper, right]
+
+        pt1 = np.moveaxis(np.array((phi1, lam1)), 0, -1)
+        pt2 = np.moveaxis(np.array((phi2, lam2)), 0, -1)
+        pt3 = np.moveaxis(np.array((phi3, lam3)), 0, -1)
+        pt4 = np.moveaxis(np.array((phi4, lam4)), 0, -1)
+
+        area = spherical_excess_area(np.deg2rad(pt1), np.deg2rad(pt2), np.deg2rad(pt3), np.deg2rad(pt4))
         return area
 
 
@@ -180,7 +198,7 @@ class GridspecTile(LogicallyRectangularGrid):
 
     def approx_area_km2(self):
         corners = np.deg2rad(self.get_corners())
-        area = spherical_excess_area(*corners[0], *corners[1], *corners[2], *corners[3]) / 1e6
+        area = spherical_excess_area(corners[0], corners[1], corners[2], corners[3]) / 1e6
         return area
 
     def logical_center_latlon(self):
@@ -384,6 +402,8 @@ class CFSingleTile(LogicallyRectangularGrid):
     name_lat_bnds = 'lat_bnds'
     name_lon_bnds = 'lon_bnds'
 
+    name_area = 'area'
+
     def __init__(self, name=None, center_lats=None, center_lons=None, lat_bnds=None, lon_bnds=None):
         super().__init__()
         self.name = name
@@ -425,6 +445,15 @@ class CFSingleTile(LogicallyRectangularGrid):
                 standard_name="geographic_latitude",
                 units="degree_north",
                 bounds=self.name_lat_bnds,
+            )
+        )
+        if self.supergrid_lats is None:
+            self._update_supergrids()
+        ds[self.name_area] = xr.DataArray(
+            self.area, dims=[self.name_dim1, self.name_dim2],
+            attrs=dict(
+                standard_name="cell_area",
+                units="m2",
             )
         )
         return ds
