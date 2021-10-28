@@ -115,17 +115,23 @@ def sgcs(n, stretch_factor, target_point, output_dir):
 @click.option('-pe/-pc', '--polar-edge/--pole-centered',
               default=True,
               help="Specifies pole-centered or polar edges. Default is --polar-edge.")
+@click.option('-hp', '--half-polar',
+              default=False,
+              is_flag=True,
+              help="Specifies a midpoint center coordinate for a --pole-centered grid.")
 @click.option('-de/-dc', '--dateline-edge/--dateline-centered',
               default=True,
               help="Specifies dateline-centered or a dateline edge. Default is --dateline-edge.")
 @click.option(*output_dir_option_posargs, **output_dir_option_kwargs)
-def latlon(ny, nx, bbox, polar_edge, dateline_edge, output_dir):
+def latlon(ny, nx, bbox, polar_edge, half_polar, dateline_edge, output_dir):
     """Create a regular lat-lon grid.
 
     NY is the number of latitude boxes. NX is the number of longitude boxes.
     """
     pole_centered = not polar_edge
     dateline_centered = not dateline_edge
+    if half_polar and polar_edge:
+        raise click.BadParameter('--half-polar is only valid for --pole-centered grids')
     xmin = bbox[0]
     ymin = bbox[1]
     xmax = bbox[2]
@@ -140,10 +146,11 @@ def latlon(ny, nx, bbox, polar_edge, dateline_edge, output_dir):
     click.echo(f'  Latitude dimension:  {ny}')
     click.echo(f'  Longitude dimension: {nx}')
     click.echo(f'  Pole-centered:       {pole_centered}')
+    click.echo(f'  Half-polar:          {half_polar}')
     click.echo(f'  Dateline-centered:   {dateline_centered}')
     tile = GridspecRegularLatLon(
         nx=nx, ny=ny, bbox=bbox,
-        pole_centered=pole_centered, dateline_centered=dateline_centered
+        pole_centered=pole_centered, dateline_centered=dateline_centered, half_polar=half_polar
     )
     click.echo('\nWriting mosaic and tile files.')
     ofile = tile.to_netcdf(directory=output_dir)

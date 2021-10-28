@@ -5,7 +5,7 @@ from gridspec.base import CFSingleTile
 
 class GridspecRegularLatLon(CFSingleTile):
     def __init__(self, nx, ny, name='regular_lat_lon_{ny}x{nx}',
-                 bbox=(-180, -90, 180, 90), pole_centered=False, dateline_centered=False):
+                 bbox=(-180, -90, 180, 90), pole_centered=False, dateline_centered=False, half_polar=False):
         filler_dict=dict(nx=nx, ny=ny)
         name = name.format(**filler_dict)
 
@@ -26,12 +26,16 @@ class GridspecRegularLatLon(CFSingleTile):
         if pole_centered:  # restrict bounds to [-90, 90]; agrees with ESMF_RegridWeightGen
             supergrid_lats = np.clip(supergrid_lats, -90, 90)
 
+        if half_polar: # first/last center is half-way between edges
+            supergrid_lats[1] = (supergrid_lats[0] + supergrid_lats[2])/2
+            supergrid_lats[-2] = (supergrid_lats[-1] + supergrid_lats[-3])/2
+
         super().__init__(name=name)
         self.init_from_supergrids(supergrid_lats, supergrid_lons)
 
 
 if __name__ == '__main__':
-    tile = GridspecRegularLatLon(576, 361, dateline_centered=True)
+    tile = GridspecRegularLatLon(144, 91, pole_centered=True)
     tile._update_supergrids()
     area = tile._calc_area()
 
