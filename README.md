@@ -1,5 +1,6 @@
 ## gridspec
-![CI badge](https://github.com/LiamBindle/gridspec/actions/workflows/continuous-integration.yml/badge.svg) ![GitHub](https://img.shields.io/github/license/LiamBindle/gridspec?color=blue) ![Python versions](https://img.shields.io/badge/python-%3E%3D3.6-brightgreen)
+![CI badge](https://github.com/LiamBindle/gridspec/actions/workflows/continuous-integration.yml/badge.svg) ![GitHub](https://img.shields.io/github/license/LiamBindle/gridspec?color=blue) ![Python versions](https://img.shields.io/badge/python-%3E%3D3.6-brightgreen) [![DOI](https://zenodo.org/badge/347012459.svg)](https://zenodo.org/badge/latestdoi/347012459)
+
 
 Gridspec is a proposed standard for representing Earth system model grids. The standard was originally proposed by
 V. Balaji and Z. Liang (2007; [reference](https://extranet.gfdl.noaa.gov/~vb/gridstd/gridstd.html)). 
