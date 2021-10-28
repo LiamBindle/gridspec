@@ -59,7 +59,7 @@ $
 
 Creating a stretched cubed-sphere grid:
 ```console
-$ gridspec-create gcs 24 -s 2 -t 40 -100
+$ gridspec-create sgcs 24 -s 2 -t 40 -100
 Creating stretched gnomonic cubed-sphere grid.
   Cubed-sphere size: C12
   Stretch factor:    2.0
