@@ -15,7 +15,9 @@ The grids that are currently implemented are:
 - [X] gnomonic cubed-sphere (see: `gridspec-create gcs --help`)
 - [X] stretched gnomonic cubed-sphere (see: `gridspec-create sgcs --help`)
 - [X] regular lat-lon grid (see: `gridspec-create latlon --help`)
-- [ ] gaussian grids
+  - [X] pole-centered/polar-edge and dateline-centered/dateline-edge
+  - [X] regional lat-lon grid 
+- [ ] gaussian grid
 
 See "Contributing" for information on submitting pull-requests and setting up a development copy. 
 
